@@ -227,3 +227,42 @@ This makes the workflow per new circuit:
 3. Call `verify(proof, publicInputs)` with data from `circuit/target/proof` and `circuit/target/public_inputs` → returns `true`
 4. Mutate one byte of proof → returns `false`
 5. Change public input (e.g. `y=7` → `y=8`) → returns `false`
+
+---
+
+## TODO
+
+### honk-verifier-rs (standard Rust verifier)
+- [ ] `cargo new honk-verifier-rs --bin`
+- [ ] Add dependencies: `ark-bn254`, `ark-ff`, `ark-ec`, `ark-serialize`, `tiny-keccak`
+- [ ] Implement `Fr` ops using ark-bn254 (add, mul, inv, pow)
+- [ ] Implement `G1Point` struct + `ec_add`, `ec_mul` using ark-bn254
+- [ ] Implement `ec_pairing` using ark-bn254 (final pairing check with hardcoded G2)
+- [ ] Implement `Transcript` (Fiat-Shamir via keccak256) matching Solidity `TranscriptLib`
+- [ ] Implement `load_proof()` — deserialize 440 field elements from `circuit/target/proof`
+- [ ] Implement `load_vk()` — hardcode VK constants from `HonkVerifier.sol`
+- [ ] Implement `load_public_inputs()` — read from `circuit/target/public_inputs`
+- [ ] Translate `verifySumcheck()` from Solidity
+- [ ] Translate `RelationsLib` (8 sub-relations: Arithmetic, Permutation, LogDerivative, DeltaRange, Elliptic, Auxiliary, Poseidon2External, Poseidon2Internal)
+- [ ] Translate `verifyShplemini()` from Solidity
+- [ ] `cargo run` → prints `true` for real proof
+- [ ] Test with mutated proof → prints `false`
+
+### polkavm-ark-test (ark-bn254 no_std compile test)
+- [ ] Create dir, copy `.cargo/config.toml`, `rust-toolchain.toml`, target JSON from `poseidon-contract/`
+- [ ] Write minimal `Cargo.toml` with `ark-bn254 = { version = "0.5.0", default-features = false }`
+- [ ] Write minimal `src/main.rs`: `#![no_std]`, import `ark_bn254::Fr`, do one field mul, return result
+- [ ] Run `./build.sh` — record: does it compile? binary size?
+- [ ] If compile fails: note exact error — determines if we use precompile approach instead
+
+### honk-verifier-polkavm (final PolkaVM contract) — after both above are done
+- [ ] Create dir with full PolkaVM project structure
+- [ ] Port `honk-verifier-rs` logic to no_std (swap ark for precompile calls OR ark no_std if test passed)
+- [ ] Add `tiny-keccak` (`default-features = false`) for transcript
+- [ ] Embed VK as constants in `src/vk.rs`
+- [ ] Add `verify()` function selector + ABI decode in contract entry point
+- [ ] Set `SimpleAlloc` to 256KB
+- [ ] `./build.sh` → `verifier.polkavm` < 1MB
+- [ ] Deploy to Paseo testnet
+- [ ] Call with real proof → `true`
+- [ ] Call with bad proof → `false`

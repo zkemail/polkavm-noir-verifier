@@ -14,15 +14,22 @@ bb prove --bytecode_path ./target/circuit.json --witness_path ./target/circuit.g
 
 ---
 
-## Library Research Findings
+## Library Research Findings (Exhaustive)
 
-`zkVerify/ultrahonk_verifier` (crate: `ultrahonk_no_std`) was investigated but **does not work** with bb's output format:
-- Library expects VK of **1888 bytes** (28 G1 points + 3×32 header)
-- bb v0.84.0 and v0.87.0 both produce **1760 bytes** (26 G1 points + 3×32 header)
-- No `bb` CLI flag produces the format the library needs — it was built for an internal Aztec format
-- `zkpassport/noir_rs` and `zkmopro/noir-rs` wrap C++ barretenberg FFI — not suitable
+All known Rust UltraHonk verifiers were tested and confirmed incompatible:
 
-**Conclusion: no ready-made Rust UltraHonk verifier is compatible with standard bb CLI output. We translate HonkVerifier.sol directly.**
+| Library | Issue |
+|---|---|
+| `zkVerify/ultrahonk_verifier` | Needs EVM proof format: pairing point object (512 bytes) prepended to proof. Old `-t evm` bb flag no longer exists. |
+| `willemolding/ultrahonk_verifier_soroban` | Same VK/proof format requirement + Soroban host dependencies |
+| `miquelcabot/ultrahonk_verifier` | Same format (fork of zkVerify) |
+| `zkpassport/noir_rs`, `zkmopro/noir-rs` | Wrap C++ barretenberg FFI — not portable |
+
+Root cause: all libraries expect the **EVM proof format** where the proof bytes begin with a 512-byte Pairing Point Object. This was generated with the old `bb prove -t evm` flag which no longer exists in any bb version available via `noirup`.
+
+bb tested: v0.84.0 (beta.5), v0.87.0 (beta.7), v3.0.0-nightly (beta.17) — none work.
+
+**Conclusion: translate `HonkVerifier.sol` directly to Rust. Use original bb v0.84.0 / nargo beta.5.**
 
 ---
 
@@ -134,7 +141,9 @@ Per-circuit workflow:
 ## TODO
 
 ### honk-verifier-rs (translate HonkVerifier.sol to Rust)
-- [x] Created project, confirmed `ultrahonk_no_std` incompatible (VK format mismatch)
+- [x] Created project
+- [x] Confirmed all pre-built Rust UltraHonk verifiers incompatible (EVM proof format / `-t evm` flag removed from bb)
+- [x] Reverted to bb v0.84.0 / nargo beta.5 (original versions)
 - [ ] Add dependencies: `ark-bn254`, `ark-ff`, `ark-ec`, `ark-serialize`, `tiny-keccak`
 - [ ] Implement `Fr` ops (add, mul, inv, pow) using ark-bn254
 - [ ] Implement `G1Point` + `ec_add`, `ec_mul`, `ec_pairing` using ark-bn254

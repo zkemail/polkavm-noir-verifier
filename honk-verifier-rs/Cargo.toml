@@ -1,0 +1,11 @@
+[package]
+name = "honk-verifier-rs"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "honk-verifier-rs"
+path = "src/main.rs"
+
+[dependencies]
+ultrahonk-no-std = { git = "https://github.com/zkVerify/ultrahonk_verifier.git" }

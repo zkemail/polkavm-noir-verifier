@@ -14,27 +14,15 @@ bb prove --bytecode_path ./target/circuit.json --witness_path ./target/circuit.g
 
 ---
 
-## Key Library: `ultrahonk_no_std`
+## Library Research Findings
 
-Research found a ready-made pure Rust UltraHonk verifier: **`zkVerify/ultrahonk_verifier`** (crate: `ultrahonk_no_std`).
+`zkVerify/ultrahonk_verifier` (crate: `ultrahonk_no_std`) was investigated but **does not work** with bb's output format:
+- Library expects VK of **1888 bytes** (28 G1 points + 3×32 header)
+- bb v0.84.0 and v0.87.0 both produce **1760 bytes** (26 G1 points + 3×32 header)
+- No `bb` CLI flag produces the format the library needs — it was built for an internal Aztec format
+- `zkpassport/noir_rs` and `zkmopro/noir-rs` wrap C++ barretenberg FFI — not suitable
 
-- **bb compatibility**: explicitly documented for bb v0.84.0 ✅
-- **Keccak transcript**: matches our `--oracle_hash keccak` flag ✅
-- **Pure Rust**: no C++ / barretenberg FFI needed ✅
-- **`no_std` compatible**: directly portable to PolkaVM ✅
-- **Uses ark-bn254 internally** — same stack as our PolkaVM test ✅
-- **Actively maintained**: v0.3.2, March 2026, 208 commits
-
-API:
-```rust
-use ultrahonk_no_std::{verify, ProofType};
-
-let proof = ProofType::ZK(proof_bytes);           // bytes from bb prove
-let result = verify::<()>(&vk_bytes, &proof, &public_inputs);
-// public_inputs: &[[u8; 32]] — each as 32-byte big-endian field element
-```
-
-Note: proof bytes and VK may need minor reformatting from bb's raw output — check the crate's docs/examples for the expected input layout.
+**Conclusion: no ready-made Rust UltraHonk verifier is compatible with standard bb CLI output. We translate HonkVerifier.sol directly.**
 
 ---
 
@@ -145,23 +133,27 @@ Per-circuit workflow:
 
 ## TODO
 
-### honk-verifier-rs (confirm ultrahonk_no_std works with our artifacts)
-- [ ] `cargo new honk-verifier-rs --bin`
-- [ ] Add `ultrahonk_no_std` to `Cargo.toml` (check exact version compatible with bb v0.84.0)
-- [ ] Read `circuit/target/proof` bytes
-- [ ] Read `circuit/target/vk` bytes
-- [ ] Read `circuit/target/public_inputs` — parse into `[[u8; 32]]`
-- [ ] Convert proof/vk to format expected by `ultrahonk_no_std` (check crate docs/examples for layout)
-- [ ] Call `verify::<()>(&vk_bytes, &proof, &public_inputs)`
+### honk-verifier-rs (translate HonkVerifier.sol to Rust)
+- [x] Created project, confirmed `ultrahonk_no_std` incompatible (VK format mismatch)
+- [ ] Add dependencies: `ark-bn254`, `ark-ff`, `ark-ec`, `ark-serialize`, `tiny-keccak`
+- [ ] Implement `Fr` ops (add, mul, inv, pow) using ark-bn254
+- [ ] Implement `G1Point` + `ec_add`, `ec_mul`, `ec_pairing` using ark-bn254
+- [ ] Implement `Transcript` (Fiat-Shamir keccak256) from Solidity `TranscriptLib`
+- [ ] Implement `load_proof()` — deserialize from `circuit/target/proof`
+- [ ] Implement `load_vk()` — parse from `circuit/target/vk` binary
+- [ ] Implement `load_public_inputs()` — read from `circuit/target/public_inputs`
+- [ ] Translate `verifySumcheck()` from HonkVerifier.sol
+- [ ] Translate `RelationsLib` (8 sub-relations)
+- [ ] Translate `verifyShplemini()` from HonkVerifier.sol
 - [ ] `cargo run` → prints `true`
 - [ ] Test with 1 flipped byte in proof → prints `false`
 
-### polkavm-ark-test (test ultrahonk_no_std no_std compile on PolkaVM)
+### polkavm-ark-test (test ark-bn254 no_std compile on PolkaVM)
 - [ ] Create dir, copy `.cargo/config.toml`, `rust-toolchain.toml`, `riscv64emac-unknown-none-polkavm.json` from `poseidon-contract/`
-- [ ] Write `Cargo.toml` with `ultrahonk_no_std = { version = "...", default-features = false }`
-- [ ] Write minimal `src/main.rs`: `#![no_std]`, call verifier with hardcoded bytes, return result via `api::return_value`
+- [ ] Write `Cargo.toml` with `ark-bn254 = { version = "0.5.0", default-features = false }`
+- [ ] Write minimal `src/main.rs`: `#![no_std]`, use `ark_bn254::Fr`, do one field mul
 - [ ] Run `./build.sh` — record: compiles? binary size?
-- [ ] If compile fails: note exact error → use precompile fallback path
+- [ ] If compile fails: note exact error → use precompile calls instead
 
 ### honk-verifier-polkavm (final PolkaVM contract — after both above)
 - [ ] Create dir with full PolkaVM project structure (copy from `poseidon-contract/`)

@@ -8,4 +8,8 @@ name = "honk-verifier-rs"
 path = "src/main.rs"
 
 [dependencies]
-ultrahonk-no-std = { git = "https://github.com/zkVerify/ultrahonk_verifier.git" }
+ark-bn254 = "0.5.0"
+ark-ff = "0.5.0"
+ark-ec = "0.5.0"
+ark-serialize = "0.5.0"
+tiny-keccak = { version = "2.0", features = ["keccak"] }

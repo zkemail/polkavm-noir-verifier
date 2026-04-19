@@ -60,9 +60,12 @@ impl Fr {
             let b = &bytes[(3 - i) * 8..(3 - i) * 8 + 8];
             limbs[i] = u64::from_be_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]);
         }
-        // Reduce mod P if needed (simple: at most one subtraction)
-        let limbs = reduce_once(&limbs, &P);
-        // Convert to Montgomery: limbs * R2 / R = limbs * R mod P
+        // Full reduction mod P: keccak outputs can be up to 2^256-1 ≈ 5.3*P,
+        // so one subtraction is not sufficient. Loop until limbs < P.
+        while geq_p(&limbs) {
+            limbs = sub_mod(&limbs, &P, &P);
+        }
+        // Convert to Montgomery form: limbs * R mod P
         Fr(mont_mul(&limbs, &R2))
     }
 
@@ -193,24 +196,37 @@ fn sub_mod(a: &[u64; 4], b: &[u64; 4], m: &[u64; 4]) -> [u64; 4] {
     r
 }
 
-/// Reduce once: if a >= m, return a - m, else a
+/// Compare a >= P (the BN254 Fr modulus), used for full reduction.
+fn geq_p(a: &[u64; 4]) -> bool {
+    for i in (0..4).rev() {
+        if a[i] > P[i] {
+            return true;
+        } else if a[i] < P[i] {
+            return false;
+        }
+    }
+    true // equal
+}
+
+/// Reduce once: if a >= m, return a - m, else a.
+/// Only correct when a < 2m (single reduction suffices for montgomery output).
 fn reduce_once(a: &[u64; 4], m: &[u64; 4]) -> [u64; 4] {
-    // Check if a >= m (compare from most significant limb)
+    // Compare a >= m from most significant limb
     let geq = {
-        let mut c = true;
-        let mut eq = true;
+        let mut result = false; // a < m unless proven otherwise
+        let mut decided = false;
         for i in (0..4).rev() {
-            if eq {
+            if !decided {
                 if a[i] > m[i] {
-                    c = true;
-                    eq = false;
+                    result = true;
+                    decided = true;
                 } else if a[i] < m[i] {
-                    c = false;
-                    eq = false;
+                    result = false;
+                    decided = true;
                 }
             }
         }
-        c || eq
+        if !decided { true } else { result } // equal counts as >=
     };
     if geq {
         sub_mod(a, m, m)

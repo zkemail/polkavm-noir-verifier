@@ -55,27 +55,39 @@ fn check_sum(round_univariate: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH], round_tar
 }
 
 fn compute_next_target_sum(
-    round_univariates: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH],
+    u: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH],
     challenge: Fr,
 ) -> Fr {
-    let denoms = barycentric_lagrange_denominators();
+    let d = barycentric_lagrange_denominators();
+    let c0 = challenge;
+    let c1 = challenge - Fr::from_u64(1);
+    let c2 = challenge - Fr::from_u64(2);
+    let c3 = challenge - Fr::from_u64(3);
+    let c4 = challenge - Fr::from_u64(4);
+    let c5 = challenge - Fr::from_u64(5);
+    let c6 = challenge - Fr::from_u64(6);
+    let c7 = challenge - Fr::from_u64(7);
 
-    let mut numerator_value = Fr::one();
-    for i in 0..BATCHED_RELATION_PARTIAL_LENGTH {
-        numerator_value = numerator_value * (challenge - Fr::from_u64(i as u64));
-    }
+    let numerator = c0 * c1 * c2 * c3 * c4 * c5 * c6 * c7;
 
-    let mut denominator_inverses = [Fr::zero(); BATCHED_RELATION_PARTIAL_LENGTH];
-    for i in 0..BATCHED_RELATION_PARTIAL_LENGTH {
-        let inv = denoms[i] * (challenge - Fr::from_u64(i as u64));
-        denominator_inverses[i] = inv.inverse().unwrap_or(Fr::zero());
-    }
+    let i0 = (d[0] * c0).inverse().unwrap_or(Fr::zero());
+    let i1 = (d[1] * c1).inverse().unwrap_or(Fr::zero());
+    let i2 = (d[2] * c2).inverse().unwrap_or(Fr::zero());
+    let i3 = (d[3] * c3).inverse().unwrap_or(Fr::zero());
+    let i4 = (d[4] * c4).inverse().unwrap_or(Fr::zero());
+    let i5 = (d[5] * c5).inverse().unwrap_or(Fr::zero());
+    let i6 = (d[6] * c6).inverse().unwrap_or(Fr::zero());
+    let i7 = (d[7] * c7).inverse().unwrap_or(Fr::zero());
 
-    let mut target_sum = Fr::zero();
-    for i in 0..BATCHED_RELATION_PARTIAL_LENGTH {
-        target_sum = target_sum + round_univariates[i] * denominator_inverses[i];
-    }
-    target_sum * numerator_value
+    let target = u[0] * i0
+        + u[1] * i1
+        + u[2] * i2
+        + u[3] * i3
+        + u[4] * i4
+        + u[5] * i5
+        + u[6] * i6
+        + u[7] * i7;
+    target * numerator
 }
 
 fn partially_evaluate_pow(gate_challenge: Fr, current_evaluation: Fr, round_challenge: Fr) -> Fr {

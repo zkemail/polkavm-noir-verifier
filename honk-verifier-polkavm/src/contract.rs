@@ -136,21 +136,12 @@ fn handle_verify(length: usize) {
         }
     };
 
-    // DIAGNOSTIC: test GCD inverse on non-trivial value and array accumulation
-    // Expected: inv(65537) = 0x208da9b4604758fe17ce704728f1913701cf816817f2a686224b443fe3c8ac38
-    let inv65537 = Fr::from_u64(65537).inverse().unwrap();
-    // Test: product of (Fr(5) * inv65537) should be 5/65537 mod P
-    let prod = Fr::from_u64(5) * inv65537;
-    // Also test: accumulate 8 multiplications in a loop to see if loop index affects correctness
-    let mut acc = Fr::one();
-    for i in 0u64..8 {
-        acc = acc * Fr::from_u64(i + 1);  // should give 8! = 40320
+    let result = do_verify(proof_bytes, &public_inputs);
+    if result {
+        api::return_value(ReturnFlags::empty(), b"\x01");
+    } else {
+        api::return_value(ReturnFlags::REVERT, b"VERIFY_FAILED");
     }
-    let mut out = [0u8; 96];
-    out[0..32].copy_from_slice(&crate::fr_utils::fr_to_scalar(inv65537)); // inv(65537)
-    out[32..64].copy_from_slice(&crate::fr_utils::fr_to_scalar(prod));    // 5/65537
-    out[64..96].copy_from_slice(&crate::fr_utils::fr_to_scalar(acc));     // 8! = 40320
-    api::return_value(ReturnFlags::empty(), &out);
 }
 
 fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {

@@ -83,7 +83,7 @@ fn read_u256_as_usize(bytes: &[u8]) -> Option<usize> {
 ///   [offset_to_proof+32..+proof_length]  proof bytes
 ///   [offset_to_array..+32]  array_length
 ///   [offset_to_array+32..]  array_length × 32-byte elements
-fn parse_verify_args(data: &[u8]) -> Option<(&[u8], Vec<[u8; 32]>)> {
+fn parse_verify_args(data: &[u8]) -> Option<(Vec<u8>, Vec<[u8; 32]>)> {
     if data.len() < 64 {
         return None;
     }
@@ -100,7 +100,7 @@ fn parse_verify_args(data: &[u8]) -> Option<(&[u8], Vec<[u8; 32]>)> {
     if data.len() < proof_end {
         return None;
     }
-    let proof_bytes = &data[proof_start..proof_end];
+    let proof_bytes = data[proof_start..proof_end].to_vec();
 
     // Parse bytes32[] array
     if data.len() < arr_offset.checked_add(32)? {
@@ -112,11 +112,13 @@ fn parse_verify_args(data: &[u8]) -> Option<(&[u8], Vec<[u8; 32]>)> {
     if data.len() < arr_data_end {
         return None;
     }
-    let mut public_inputs: Vec<[u8; 32]> = alloc::vec![[0u8; 32]; arr_len];
-    for i in 0..arr_len {
-        let start = arr_data_start + i * 32;
-        public_inputs[i].copy_from_slice(&data[start..start + 32]);
+    // Current verifier expects exactly one public input.
+    // Avoid index loops here because loop/index codegen is known-bad on this target.
+    if arr_len != 1 {
+        return None;
     }
+    let mut public_inputs: Vec<[u8; 32]> = alloc::vec![[0u8; 32]; 1];
+    public_inputs[0].copy_from_slice(&data[arr_data_start..arr_data_start + 32]);
 
     Some((proof_bytes, public_inputs))
 }
@@ -136,12 +138,13 @@ fn handle_verify(length: usize) {
         }
     };
 
-    let result = do_verify(proof_bytes, &public_inputs);
-    if result {
-        api::return_value(ReturnFlags::empty(), b"\x01");
-    } else {
-        api::return_value(ReturnFlags::REVERT, b"VERIFY_FAILED");
-    }
+    // Checkpoint diagnostic mode:
+    // 0x00 = verified
+    // 0x64..0x68 = sumcheck round failure
+    // 0xc8 = final grand sum mismatch
+    // 0xff = shplemini failure
+    let code = do_verify_diag(&proof_bytes, &public_inputs);
+    api::return_value(ReturnFlags::empty(), &[code]);
 }
 
 fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {

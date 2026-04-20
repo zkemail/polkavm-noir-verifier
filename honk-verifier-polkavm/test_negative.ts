@@ -66,6 +66,12 @@ async function main() {
   console.log(`Gas used: ${receipt?.gasUsed.toString()}`);
 
   if (!reverted) {
+    try {
+      const callResult = await provider.call({ to: contractAddress, data: callData });
+      console.error(`eth_call return: ${callResult}`);
+    } catch (e) {
+      console.error('eth_call failed for corrupted proof payload');
+    }
     console.error('FAIL: Corrupted proof unexpectedly succeeded.');
     process.exit(1);
   }

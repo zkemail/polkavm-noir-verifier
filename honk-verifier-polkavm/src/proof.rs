@@ -1,3 +1,6 @@
+extern crate alloc;
+use alloc::boxed::Box;
+use alloc::alloc::{alloc_zeroed, Layout};
 use crate::fr::Fr;
 
 pub const CONST_PROOF_SIZE_LOG_N: usize = 28;
@@ -57,64 +60,54 @@ fn read_fr(data: &[u8]) -> Fr {
     Fr::from_be_bytes(&buf)
 }
 
-/// Parse proof from raw bytes (matching TranscriptLib.loadProof in Solidity).
-pub fn load_proof(data: &[u8]) -> Proof {
-    let w1 = read_g1pp(&data[0x000..]);
-    let w2 = read_g1pp(&data[0x080..]);
-    let w3 = read_g1pp(&data[0x100..]);
-    let lookup_read_counts = read_g1pp(&data[0x180..]);
-    let lookup_read_tags = read_g1pp(&data[0x200..]);
-    let w4 = read_g1pp(&data[0x280..]);
-    let lookup_inverses = read_g1pp(&data[0x300..]);
-    let z_perm = read_g1pp(&data[0x380..]);
+/// Parse proof from raw bytes directly into heap-allocated memory.
+/// Uses alloc_zeroed to guarantee the Proof struct is never on the stack
+/// (stack allocation would overflow the limited PolkaVM stack).
+pub fn load_proof(data: &[u8]) -> Box<Proof> {
+    // Allocate zeroed Proof on the heap directly — no stack allocation.
+    let layout = Layout::new::<Proof>();
+    let ptr = unsafe { alloc_zeroed(layout) as *mut Proof };
+    assert!(!ptr.is_null());
+
+    let p = unsafe { &mut *ptr };
+
+    p.w1 = read_g1pp(&data[0x000..]);
+    p.w2 = read_g1pp(&data[0x080..]);
+    p.w3 = read_g1pp(&data[0x100..]);
+    p.lookup_read_counts = read_g1pp(&data[0x180..]);
+    p.lookup_read_tags = read_g1pp(&data[0x200..]);
+    p.w4 = read_g1pp(&data[0x280..]);
+    p.lookup_inverses = read_g1pp(&data[0x300..]);
+    p.z_perm = read_g1pp(&data[0x380..]);
 
     let mut boundary = 0x400usize;
 
-    let mut sumcheck_univariates =
-        [[Fr::zero(); BATCHED_RELATION_PARTIAL_LENGTH]; CONST_PROOF_SIZE_LOG_N];
     for i in 0..CONST_PROOF_SIZE_LOG_N {
         for j in 0..BATCHED_RELATION_PARTIAL_LENGTH {
-            sumcheck_univariates[i][j] = read_fr(&data[boundary..]);
+            p.sumcheck_univariates[i][j] = read_fr(&data[boundary..]);
             boundary += 32;
         }
     }
 
-    let mut sumcheck_evaluations = [Fr::zero(); NUMBER_OF_ENTITIES];
     for i in 0..NUMBER_OF_ENTITIES {
-        sumcheck_evaluations[i] = read_fr(&data[boundary..]);
+        p.sumcheck_evaluations[i] = read_fr(&data[boundary..]);
         boundary += 32;
     }
 
-    let mut gemini_fold_comms = [G1ProofPoint::default(); CONST_PROOF_SIZE_LOG_N - 1];
     for i in 0..CONST_PROOF_SIZE_LOG_N - 1 {
-        gemini_fold_comms[i] = read_g1pp(&data[boundary..]);
+        p.gemini_fold_comms[i] = read_g1pp(&data[boundary..]);
         boundary += 128;
     }
 
-    let mut gemini_a_evaluations = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
     for i in 0..CONST_PROOF_SIZE_LOG_N {
-        gemini_a_evaluations[i] = read_fr(&data[boundary..]);
+        p.gemini_a_evaluations[i] = read_fr(&data[boundary..]);
         boundary += 32;
     }
 
-    let shplonk_q = read_g1pp(&data[boundary..]);
+    p.shplonk_q = read_g1pp(&data[boundary..]);
     boundary += 128;
-    let kzg_quotient = read_g1pp(&data[boundary..]);
+    p.kzg_quotient = read_g1pp(&data[boundary..]);
+    let _ = boundary;
 
-    Proof {
-        w1,
-        w2,
-        w3,
-        w4,
-        z_perm,
-        lookup_read_counts,
-        lookup_read_tags,
-        lookup_inverses,
-        sumcheck_univariates,
-        sumcheck_evaluations,
-        gemini_fold_comms,
-        gemini_a_evaluations,
-        shplonk_q,
-        kzg_quotient,
-    }
+    unsafe { Box::from_raw(ptr) }
 }

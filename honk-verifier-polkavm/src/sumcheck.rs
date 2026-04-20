@@ -83,17 +83,27 @@ fn partially_evaluate_pow(gate_challenge: Fr, current_evaluation: Fr, round_chal
     current_evaluation * univariate_eval
 }
 
-pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {
+/// Returns: 0 = success, 100+round = check_sum failed at that round, 200 = final compare failed.
+pub fn get_denom0_pub() -> Fr {
+    barycentric_lagrange_denominators()[0]
+}
+
+pub fn compute_round0_target_pub(
+    round_univariates: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH],
+    challenge: Fr,
+) -> Fr {
+    compute_next_target_sum(round_univariates, challenge)
+}
+
+pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, log_n: usize) -> u8 {
     let mut round_target = Fr::zero();
     let mut pow_partial_evaluation = Fr::one();
 
     for round in 0..log_n {
         let round_univariate = &proof.sumcheck_univariates[round];
-
         if !check_sum(round_univariate, round_target) {
-            return false;
+            return 100 + round as u8;
         }
-
         let round_challenge = t.sumcheck_u_challenges[round];
         round_target = compute_next_target_sum(round_univariate, round_challenge);
         pow_partial_evaluation = partially_evaluate_pow(
@@ -110,5 +120,9 @@ pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {
         pow_partial_evaluation,
     );
 
-    grand_honk_relation_sum == round_target
+    if grand_honk_relation_sum != round_target { 200 } else { 0 }
+}
+
+pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {
+    verify_sumcheck_diag(proof, t, log_n) == 0
 }

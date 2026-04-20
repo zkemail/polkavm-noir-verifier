@@ -17,7 +17,6 @@ codegen-units = 1
 polkavm-derive = { version = "0.25.0" }
 simplealloc = { version = "0.0.1", git = "https://github.com/paritytech/polkavm.git", rev = "ff37df6bf75201ef9e5f535762d267d7990c96d2" }
 tiny-keccak = { version = "2.0", features = ["keccak"] }
-ethabi = { version = "18.0", default-features = false }
 
 [dependencies.uapi]
 package = "pallet-revive-uapi"

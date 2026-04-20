@@ -1,5 +1,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
+use alloc::boxed::Box;
+use alloc::alloc::{alloc_zeroed, Layout};
 
 use crate::fr::Fr;
 use crate::fr_utils::{fr_to_scalar, keccak256, split_challenge};
@@ -64,13 +66,14 @@ fn u64_to_be32(v: u64) -> [u8; 32] {
 }
 
 /// Generate the full Fiat-Shamir transcript (matches TranscriptLib.generateTranscript).
+/// Returns a heap-boxed Transcript to avoid ~2.9KB stack allocation in the caller.
 pub fn generate_transcript(
     proof: &Proof,
     public_inputs: &[[u8; 32]],
     circuit_size: u64,
     public_inputs_size: u64,
     pub_inputs_offset: u64,
-) -> Transcript {
+) -> Box<Transcript> {
     // --- Eta challenge ---
     let mut round0: Vec<[u8; 32]> = Vec::new();
     round0.push(u64_to_be32(circuit_size));
@@ -220,14 +223,17 @@ pub fn generate_transcript(
     prev = hash_u256s(&z_elems);
     let (shplonk_z, _) = split_challenge(prev);
 
-    Transcript {
-        relation_parameters,
-        alphas,
-        gate_challenges,
-        sumcheck_u_challenges,
-        rho,
-        gemini_r,
-        shplonk_nu,
-        shplonk_z,
-    }
+    // Allocate the Transcript directly on the heap to avoid ~2.9KB stack allocation.
+    let layout = Layout::new::<Transcript>();
+    let ptr = unsafe { alloc_zeroed(layout) as *mut Transcript };
+    let t = unsafe { &mut *ptr };
+    t.relation_parameters = relation_parameters;
+    t.alphas = alphas;
+    t.gate_challenges = gate_challenges;
+    t.sumcheck_u_challenges = sumcheck_u_challenges;
+    t.rho = rho;
+    t.gemini_r = gemini_r;
+    t.shplonk_nu = shplonk_nu;
+    t.shplonk_z = shplonk_z;
+    unsafe { Box::from_raw(ptr) }
 }

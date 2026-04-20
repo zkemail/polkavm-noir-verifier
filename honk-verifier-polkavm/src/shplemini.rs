@@ -1,3 +1,4 @@
+extern crate alloc;
 use crate::fr::Fr;
 use crate::fr_utils::{fq_from_split, fr_to_scalar};
 use crate::g1::{ec_add, ec_mul, ec_pairing_check, negate, G1Point};
@@ -13,9 +14,9 @@ fn convert_proof_point(pp: &crate::proof::G1ProofPoint) -> G1Point {
     G1Point { x, y }
 }
 
-/// Compute powers of r: [r, r^2, r^4, ..., r^{2^{N-1}}]
-fn compute_squares(r: Fr) -> [Fr; CONST_PROOF_SIZE_LOG_N] {
-    let mut squares = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
+/// Compute powers of r: [r, r^2, r^4, ..., r^{2^{N-1}}] into a heap vec.
+fn compute_squares(r: Fr) -> alloc::vec::Vec<Fr> {
+    let mut squares = alloc::vec![Fr::zero(); CONST_PROOF_SIZE_LOG_N];
     squares[0] = r;
     for i in 1..CONST_PROOF_SIZE_LOG_N {
         squares[i] = squares[i - 1] * squares[i - 1];
@@ -23,15 +24,15 @@ fn compute_squares(r: Fr) -> [Fr; CONST_PROOF_SIZE_LOG_N] {
     squares
 }
 
-/// Reconstruct A_l(r^{2^l}) evaluations for l = 0..logN-1.
+/// Reconstruct A_l(r^{2^l}) evaluations for l = 0..logN-1. Returns a heap vec.
 fn compute_fold_pos_evaluations(
-    sumcheck_u_challenges: &[Fr; CONST_PROOF_SIZE_LOG_N],
+    sumcheck_u_challenges: &[Fr],
     batched_eval_accumulator: Fr,
     gemini_evaluations: &[Fr; CONST_PROOF_SIZE_LOG_N],
-    gemini_eval_challenge_powers: &[Fr; CONST_PROOF_SIZE_LOG_N],
+    gemini_eval_challenge_powers: &[Fr],
     log_size: usize,
-) -> [Fr; CONST_PROOF_SIZE_LOG_N] {
-    let mut fold_pos_evaluations = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
+) -> alloc::vec::Vec<Fr> {
+    let mut fold_pos_evaluations = alloc::vec![Fr::zero(); CONST_PROOF_SIZE_LOG_N];
     let mut acc = batched_eval_accumulator;
 
     for i in (1..=CONST_PROOF_SIZE_LOG_N).rev() {
@@ -61,8 +62,9 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
 
     const TOTAL: usize = NUMBER_OF_ENTITIES + CONST_PROOF_SIZE_LOG_N + 2;
 
-    let mut scalars = [Fr::zero(); TOTAL];
-    let mut commitments = [G1Point::infinity(); TOTAL];
+    // Heap-allocate to avoid ~6.7KB stack overflow (2240 + 4480 bytes).
+    let mut scalars: alloc::vec::Vec<Fr> = alloc::vec![Fr::zero(); TOTAL];
+    let mut commitments: alloc::vec::Vec<G1Point> = alloc::vec![G1Point::infinity(); TOTAL];
 
     let pos_inv_denom = (t.shplonk_z - powers_of_r[0]).inverse().unwrap();
     let neg_inv_denom = (t.shplonk_z + powers_of_r[0]).inverse().unwrap();

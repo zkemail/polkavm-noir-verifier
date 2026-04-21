@@ -485,6 +485,17 @@ pub fn accumulate_relation_evaluations(
     alphas: &[Fr; NUMBER_OF_ALPHAS],
     pow_partial_eval: Fr,
 ) -> Fr {
+    let evals = accumulate_relation_evaluations_raw(purported_evals, rp, pow_partial_eval);
+    scale_and_batch(&evals, alphas)
+}
+
+/// Returns the raw 26 sub-relation evaluations (before scale_and_batch).
+/// Used for diagnostic purposes to identify which sub-relation is wrong.
+pub fn accumulate_relation_evaluations_raw(
+    purported_evals: &[Fr; NUMBER_OF_ENTITIES],
+    rp: &RelationParameters,
+    pow_partial_eval: Fr,
+) -> [Fr; NUMBER_OF_SUBRELATIONS] {
     let mut evals = [Fr::zero(); NUMBER_OF_SUBRELATIONS];
 
     accumulate_arithmetic(purported_evals, &mut evals, pow_partial_eval);
@@ -496,5 +507,5 @@ pub fn accumulate_relation_evaluations(
     accumulate_poseidon_external(purported_evals, &mut evals, pow_partial_eval);
     accumulate_poseidon_internal(purported_evals, &mut evals, pow_partial_eval);
 
-    scale_and_batch(&evals, alphas)
+    evals
 }

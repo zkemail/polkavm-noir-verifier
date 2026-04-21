@@ -17,7 +17,7 @@ const INV: u64 = 0xc2e1f593efffffff;
 pub const R: [u64; 4] = [
     0xac96341c4ffffffb,
     0x36fc76959f60cd29,
-    0x666ea36f7879462c,
+    0x666ea36f7879462e,
     0x0e0a77c19a07df2f,
 ];
 
@@ -139,103 +139,189 @@ impl Mul for Fr {
     }
 }
 
-/// Montgomery multiplication: computes (a * b) / R mod P using CIOS
-fn mont_mul(a: &[u64; 4], b: &[u64; 4]) -> [u64; 4] {
-    let mut t = [0u64; 5];
-    for i in 0..4 {
-        // t = t + a[i]*b + m*P where m = t[0] * INV mod 2^64
-        let mut c: u128 = 0;
-        for j in 0..4 {
-            c += t[j] as u128 + a[i] as u128 * b[j] as u128;
-            t[j] = c as u64;
-            c >>= 64;
-        }
-        t[4] = t[4].wrapping_add(c as u64);
+/// Multiply-accumulate: acc + a*b + carry_in → (lo, hi).
+/// #[inline(never)] forces LLVM to handle each u128 operation in isolation,
+/// preventing register allocation bugs on RV64E (only 16 GP registers).
+#[inline(never)]
+fn mac(acc: u64, a: u64, b: u64, carry: u64) -> (u64, u64) {
+    let r = acc as u128 + (a as u128) * (b as u128) + carry as u128;
+    (r as u64, (r >> 64) as u64)
+}
 
-        let m = t[0].wrapping_mul(INV);
-        c = t[0] as u128 + m as u128 * P[0] as u128;
-        c >>= 64;
-        for j in 1..4 {
-            c += t[j] as u128 + m as u128 * P[j] as u128;
-            t[j - 1] = c as u64;
-            c >>= 64;
-        }
-        t[3] = t[4].wrapping_add(c as u64);
-        t[4] = 0;
+/// Montgomery multiplication: computes (a * b) / R mod P using CIOS.
+/// Uses #[inline(never)] mac() to isolate each u128 op from LLVM's optimizer.
+fn mont_mul(a: &[u64; 4], b: &[u64; 4]) -> [u64; 4] {
+    let mut t0: u64 = 0;
+    let mut t1: u64 = 0;
+    let mut t2: u64 = 0;
+    let mut t3: u64 = 0;
+    let mut t4: u64 = 0;
+
+    // i = 0
+    {
+        let ai = a[0];
+        let (r, c) = mac(t0, ai, b[0], 0); t0 = r;
+        let (r, c) = mac(t1, ai, b[1], c); t1 = r;
+        let (r, c) = mac(t2, ai, b[2], c); t2 = r;
+        let (r, c) = mac(t3, ai, b[3], c); t3 = r;
+        t4 = t4.wrapping_add(c);
+        let m = t0.wrapping_mul(INV);
+        let (_, c) = mac(t0, m, P[0], 0);
+        let (r, c) = mac(t1, m, P[1], c); t0 = r;
+        let (r, c) = mac(t2, m, P[2], c); t1 = r;
+        let (r, c) = mac(t3, m, P[3], c); t2 = r;
+        t3 = t4.wrapping_add(c);
+        t4 = 0;
     }
-    reduce_once(&[t[0], t[1], t[2], t[3]], &P)
+    // i = 1
+    {
+        let ai = a[1];
+        let (r, c) = mac(t0, ai, b[0], 0); t0 = r;
+        let (r, c) = mac(t1, ai, b[1], c); t1 = r;
+        let (r, c) = mac(t2, ai, b[2], c); t2 = r;
+        let (r, c) = mac(t3, ai, b[3], c); t3 = r;
+        t4 = t4.wrapping_add(c);
+        let m = t0.wrapping_mul(INV);
+        let (_, c) = mac(t0, m, P[0], 0);
+        let (r, c) = mac(t1, m, P[1], c); t0 = r;
+        let (r, c) = mac(t2, m, P[2], c); t1 = r;
+        let (r, c) = mac(t3, m, P[3], c); t2 = r;
+        t3 = t4.wrapping_add(c);
+        t4 = 0;
+    }
+    // i = 2
+    {
+        let ai = a[2];
+        let (r, c) = mac(t0, ai, b[0], 0); t0 = r;
+        let (r, c) = mac(t1, ai, b[1], c); t1 = r;
+        let (r, c) = mac(t2, ai, b[2], c); t2 = r;
+        let (r, c) = mac(t3, ai, b[3], c); t3 = r;
+        t4 = t4.wrapping_add(c);
+        let m = t0.wrapping_mul(INV);
+        let (_, c) = mac(t0, m, P[0], 0);
+        let (r, c) = mac(t1, m, P[1], c); t0 = r;
+        let (r, c) = mac(t2, m, P[2], c); t1 = r;
+        let (r, c) = mac(t3, m, P[3], c); t2 = r;
+        t3 = t4.wrapping_add(c);
+        t4 = 0;
+    }
+    // i = 3
+    {
+        let ai = a[3];
+        let (r, c) = mac(t0, ai, b[0], 0); t0 = r;
+        let (r, c) = mac(t1, ai, b[1], c); t1 = r;
+        let (r, c) = mac(t2, ai, b[2], c); t2 = r;
+        let (r, c) = mac(t3, ai, b[3], c); t3 = r;
+        t4 = t4.wrapping_add(c);
+        let m = t0.wrapping_mul(INV);
+        let (_, c) = mac(t0, m, P[0], 0);
+        let (r, c) = mac(t1, m, P[1], c); t0 = r;
+        let (r, c) = mac(t2, m, P[2], c); t1 = r;
+        let (r, c) = mac(t3, m, P[3], c); t2 = r;
+        t3 = t4.wrapping_add(c);
+    }
+
+    reduce_once(&[t0, t1, t2, t3], &P)
+}
+
+/// 4-limb subtraction: a - b, returns (result, borrow).
+/// Uses only u64 operations (overflowing_sub) — no i128.
+/// Matches PoseidonPolkaVM's sub4 approach.
+fn sub4(a: &[u64; 4], b: &[u64; 4]) -> ([u64; 4], bool) {
+    let mut r = [0u64; 4];
+    let mut borrow: u64 = 0;
+
+    let (d, b1) = a[0].overflowing_sub(b[0]);
+    let (d2, b2) = d.overflowing_sub(borrow);
+    r[0] = d2;
+    borrow = (b1 as u64) + (b2 as u64);
+
+    let (d, b1) = a[1].overflowing_sub(b[1]);
+    let (d2, b2) = d.overflowing_sub(borrow);
+    r[1] = d2;
+    borrow = (b1 as u64) + (b2 as u64);
+
+    let (d, b1) = a[2].overflowing_sub(b[2]);
+    let (d2, b2) = d.overflowing_sub(borrow);
+    r[2] = d2;
+    borrow = (b1 as u64) + (b2 as u64);
+
+    let (d, b1) = a[3].overflowing_sub(b[3]);
+    let (d2, b2) = d.overflowing_sub(borrow);
+    r[3] = d2;
+    borrow = (b1 as u64) + (b2 as u64);
+
+    (r, borrow != 0)
+}
+
+/// 4-limb addition: a + b, returns (result, carry).
+/// Uses only u64 operations — no u128.
+fn add4(a: &[u64; 4], b: &[u64; 4]) -> ([u64; 4], bool) {
+    let mut r = [0u64; 4];
+    let mut carry: u64 = 0;
+
+    let (s, c1) = a[0].overflowing_add(b[0]);
+    let (s2, c2) = s.overflowing_add(carry);
+    r[0] = s2;
+    carry = (c1 as u64) + (c2 as u64);
+
+    let (s, c1) = a[1].overflowing_add(b[1]);
+    let (s2, c2) = s.overflowing_add(carry);
+    r[1] = s2;
+    carry = (c1 as u64) + (c2 as u64);
+
+    let (s, c1) = a[2].overflowing_add(b[2]);
+    let (s2, c2) = s.overflowing_add(carry);
+    r[2] = s2;
+    carry = (c1 as u64) + (c2 as u64);
+
+    let (s, c1) = a[3].overflowing_add(b[3]);
+    let (s2, c2) = s.overflowing_add(carry);
+    r[3] = s2;
+    carry = (c1 as u64) + (c2 as u64);
+
+    (r, carry != 0)
 }
 
 /// Addition mod m
 fn add_mod(a: &[u64; 4], b: &[u64; 4], m: &[u64; 4]) -> [u64; 4] {
-    let mut carry = 0u128;
-    let mut r = [0u64; 4];
-    for i in 0..4 {
-        carry += a[i] as u128 + b[i] as u128;
-        r[i] = carry as u64;
-        carry >>= 64;
+    let (r, carry) = add4(a, b);
+    // If carry, or r >= m, subtract m
+    let (sub_r, borrow) = sub4(&r, m);
+    if carry || !borrow {
+        sub_r
+    } else {
+        r
     }
-    // carry is 0 or 1; if result >= P, subtract P
-    reduce_once(&r, m)
 }
 
 /// Subtraction mod m: a - b mod m
 fn sub_mod(a: &[u64; 4], b: &[u64; 4], m: &[u64; 4]) -> [u64; 4] {
-    let mut borrow = 0i128;
-    let mut r = [0u64; 4];
-    for i in 0..4 {
-        let diff = a[i] as i128 - b[i] as i128 - borrow;
-        r[i] = diff as u64;
-        borrow = if diff < 0 { 1 } else { 0 };
-    }
-    if borrow != 0 {
+    let (r, borrowed) = sub4(a, b);
+    if borrowed {
         // Add m back
-        let mut carry = 0u128;
-        for i in 0..4 {
-            carry += r[i] as u128 + m[i] as u128;
-            r[i] = carry as u64;
-            carry >>= 64;
-        }
+        let (r2, _) = add4(&r, m);
+        r2
+    } else {
+        r
     }
-    r
 }
 
 /// Compare a >= P (the BN254 Fr modulus), used for full reduction.
 fn geq_p(a: &[u64; 4]) -> bool {
-    for i in (0..4).rev() {
-        if a[i] > P[i] {
-            return true;
-        } else if a[i] < P[i] {
-            return false;
-        }
-    }
-    true // equal
+    // Try subtracting P; if no borrow, a >= P
+    let (_, borrow) = sub4(a, &P);
+    !borrow
 }
 
 /// Reduce once: if a >= m, return a - m, else a.
 /// Only correct when a < 2m (single reduction suffices for montgomery output).
 fn reduce_once(a: &[u64; 4], m: &[u64; 4]) -> [u64; 4] {
-    // Compare a >= m from most significant limb
-    let geq = {
-        let mut result = false; // a < m unless proven otherwise
-        let mut decided = false;
-        for i in (0..4).rev() {
-            if !decided {
-                if a[i] > m[i] {
-                    result = true;
-                    decided = true;
-                } else if a[i] < m[i] {
-                    result = false;
-                    decided = true;
-                }
-            }
-        }
-        if !decided { true } else { result } // equal counts as >=
-    };
-    if geq {
-        sub_mod(a, m, m)
+    let (sub_r, borrow) = sub4(a, m);
+    if !borrow {
+        sub_r // a >= m, return a - m
     } else {
-        *a
+        *a // a < m, keep as is
     }
 }
 
@@ -274,34 +360,19 @@ fn shr1_256(a: &mut [u64; 4]) {
 /// Add two 256-bit values; returns the result (overflow is discarded — only used
 /// when we know the sum fits, i.e. at most P + P < 2^256).
 fn add256(a: &[u64; 4], b: &[u64; 4]) -> [u64; 4] {
-    let mut carry: u128 = 0;
-    let mut r = [0u64; 4];
-    for i in 0..4 {
-        carry += a[i] as u128 + b[i] as u128;
-        r[i] = carry as u64;
-        carry >>= 64;
-    }
+    let (r, _) = add4(a, b);
     r
 }
 
 /// Compare two 256-bit values: true if a >= b.
 fn geq256(a: &[u64; 4], b: &[u64; 4]) -> bool {
-    for i in (0..4).rev() {
-        if a[i] > b[i] { return true; }
-        if a[i] < b[i] { return false; }
-    }
-    true
+    let (_, borrow) = sub4(a, b);
+    !borrow
 }
 
 /// Subtract two 256-bit values (assumes a >= b, no underflow).
 fn sub256(a: &[u64; 4], b: &[u64; 4]) -> [u64; 4] {
-    let mut borrow: i128 = 0;
-    let mut r = [0u64; 4];
-    for i in 0..4 {
-        let diff = a[i] as i128 - b[i] as i128 - borrow;
-        r[i] = diff as u64;
-        borrow = if diff < 0 { 1 } else { 0 };
-    }
+    let (r, _) = sub4(a, b);
     r
 }
 

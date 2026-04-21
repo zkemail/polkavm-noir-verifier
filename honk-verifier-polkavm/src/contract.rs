@@ -161,16 +161,20 @@ fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {
     // When code=200, also stores grand_sum+round_target in DIAG_GRAND_SUM for retrieval.
     let code = sumcheck::verify_sumcheck_diag(&proof, &t, LOG_N);
     if code == 200 {
-        // Return 64 bytes: grand_sum || round_target for debugging
-        let (grand_sum, round_target) = sumcheck::get_grand_sum_debug(&proof, &t, LOG_N);
         use crate::fr_utils::fr_to_scalar;
-        let mut out = [0u8; 128];
-        out[0..32].copy_from_slice(&fr_to_scalar(grand_sum));
-        out[32..64].copy_from_slice(&fr_to_scalar(round_target));
-        // bytes 64-95: proof.sumcheck_evaluations[0] (verifies proof parsing)
-        out[64..96].copy_from_slice(&fr_to_scalar(proof.sumcheck_evaluations[0]));
-        // bytes 96-127: t.alphas[0] (verifies transcript)
-        out[96..128].copy_from_slice(&fr_to_scalar(t.alphas[0]));
+        // Return 1184 bytes: pow(32) + gate_chs[5](160) + sumcheck_chs[5](160) + evals[26](832)
+        let (pow_partial_eval, gate_chs, sumcheck_chs, evals) = sumcheck::get_relation_evals_debug(&proof, &t);
+        let mut out = [0u8; 1184]; // 37 field elements * 32 bytes
+        out[0..32].copy_from_slice(&fr_to_scalar(pow_partial_eval));
+        for (chunk, gc) in out[32..192].chunks_mut(32).zip(gate_chs.iter()) {
+            chunk.copy_from_slice(&fr_to_scalar(*gc));
+        }
+        for (chunk, sc) in out[192..352].chunks_mut(32).zip(sumcheck_chs.iter()) {
+            chunk.copy_from_slice(&fr_to_scalar(*sc));
+        }
+        for (chunk, ev) in out[352..].chunks_mut(32).zip(evals.iter()) {
+            chunk.copy_from_slice(&fr_to_scalar(*ev));
+        }
         api::return_value(ReturnFlags::empty(), &out);
         return 0; // unreachable but keeps type
     }

@@ -138,13 +138,12 @@ fn handle_verify(length: usize) {
         }
     };
 
-    // Checkpoint diagnostic mode:
-    // 0x00 = verified
-    // 0x64..0x68 = sumcheck round failure
-    // 0xc8 = final grand sum mismatch
-    // 0xff = shplemini failure
-    let code = do_verify_diag(&proof_bytes, &public_inputs);
-    api::return_value(ReturnFlags::empty(), &[code]);
+    let ok = do_verify(&proof_bytes, &public_inputs);
+    if ok {
+        api::return_value(ReturnFlags::empty(), &[1u8]); // 0x01 = verified
+    } else {
+        api::return_value(ReturnFlags::empty(), &[0u8]); // 0x00 = failed
+    }
 }
 
 fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {

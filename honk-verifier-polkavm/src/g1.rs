@@ -143,7 +143,7 @@ fn call_precompile(addr: u8, input: &[u8], output: &mut [u8]) {
         &target,
         gas,
         u64::MAX,
-        &[u8::MAX; 32],
+        &[0u8; 32],
         &[0u8; 32],
         input,
         Some(&mut output_ref),

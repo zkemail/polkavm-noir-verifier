@@ -6,7 +6,7 @@ use alloc::alloc::{alloc_zeroed, Layout};
 use super::fr::Fr;
 use super::fr_utils::{fr_to_scalar, keccak256, split_challenge};
 use super::proof::{
-    Proof, BATCHED_RELATION_PARTIAL_LENGTH, CONST_PROOF_SIZE_LOG_N, NUMBER_OF_ENTITIES,
+    Proof, CONST_PROOF_SIZE_LOG_N, NUMBER_OF_ENTITIES,
 };
 
 pub const NUMBER_OF_ALPHAS: usize = 25;

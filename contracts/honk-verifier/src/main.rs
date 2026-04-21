@@ -178,7 +178,7 @@ fn compute_public_input_delta(
     gamma: Fr,
     offset: u64,
     n: u64,
-    num_public_inputs: u64,
+    _num_public_inputs: u64,
 ) -> Fr {
     let mut numerator = Fr::one();
     let mut denominator = Fr::one();

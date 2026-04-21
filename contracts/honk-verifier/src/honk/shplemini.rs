@@ -149,16 +149,13 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
 
     let mut batching_challenge = t.shplonk_nu * t.shplonk_nu;
 
-    let mut pos_inv = pos_inv_denom;
-    let mut neg_inv = neg_inv_denom;
-
     for i in 0..CONST_PROOF_SIZE_LOG_N - 1 {
         let dummy_round = i >= log_n - 1;
         let idx = NUMBER_OF_ENTITIES + 1 + i;
 
         if !dummy_round {
-            pos_inv = (t.shplonk_z - powers_of_r[i + 1]).inverse().unwrap();
-            neg_inv = (t.shplonk_z + powers_of_r[i + 1]).inverse().unwrap();
+            let pos_inv = (t.shplonk_z - powers_of_r[i + 1]).inverse().unwrap();
+            let neg_inv = (t.shplonk_z + powers_of_r[i + 1]).inverse().unwrap();
 
             let scaling_factor_pos = batching_challenge * pos_inv;
             let scaling_factor_neg = batching_challenge * t.shplonk_nu * neg_inv;

@@ -109,11 +109,24 @@ All steps complete. Verified 2026-04-21.
 - [x] Verified: generated output matches existing `honk-verifier-polkavm/src/` (vk.rs and sumcheck.rs identical, contract.rs identical minus debug function)
 - [x] Verified: compiled .polkavm binary is byte-for-byte identical (55,683 bytes)
 
-### Cross-circuit verification (2026-04-21)
-- [x] Tested with 4-public-input circuit (circuit-multi-pub): N=32, LOG_N=5, PUBLIC_INPUTS=4
-- Deployed to Paseo: `0xc4C41b5AD4f268C90d5f6d6Bac27ED93C3dde7FE`
-- Valid proof: verified; wrong input: rejected; corrupted proof: rejected
-- [x] Generator handles varying public input counts correctly
+### Cross-circuit verification
+- [x] Simple circuit: LOG_N=5, 1 public input — 5/5 tests pass
+- [x] 4-public-input circuit: LOG_N=5, 4 public inputs — 3/3 tests pass
+- [x] ZK email circuit (zkemail/ens-contracts): LOG_N=19, 155 public inputs — 3/3 tests pass
 
-### Remaining TODO
-- [ ] Test with a circuit that has different LOG_N (larger circuit, e.g. LOG_N=10+)
+## TODO
+
+### Build tooling
+- [ ] **PvmBuilder adoption** — `cargo-pvm-contract-builder` would give `cargo build --release` → `.polkavm` in one step. BLOCKED: upstream doesn't support `--min-stack-size` (needed for large circuits). Options: contribute PR to github.com/paritytech/cargo-pvm-contract, or wait for upstream.
+
+### Testing
+- [ ] **Make `cargo test` work on x86** — `_lib_test.rs` and `tests/verify_test.rs` are in place but `.cargo/config.toml` forces RISC-V target. Needs wrapper script or config override to run tests on host.
+- [ ] **Pure Rust EC fallbacks for x86 testing** — implement ecAdd/ecMul/ecPairing in Rust, swap via `#[cfg(test)]`. Enables full end-to-end x86 testing including shplemini. Big effort (~30KB of BN254 code). Could adapt from PolkaZK's `bn254/` module.
+
+### Optimizations
+- [ ] **Streaming keccak in transcript** — replace `hash_u256s` Vec allocations with streaming `Keccak::update()` calls. Reduces peak heap. Less critical now with picoalloc (frees properly) but still cleaner.
+- [ ] **Tighter heap formula** — picoalloc frees memory, so the conservative formula (designed for bump allocator) oversizes the heap. Could profile actual peak usage and reduce.
+
+### Nice-to-have
+- [ ] **alloy-core ABI encoding** — replace manual ABI decode with `sol!` macro (like PolkaZK). Cleaner code, less error-prone.
+- [ ] **Remove `do_verify_diag` from reference contract** — debug function in `contracts/honk-verifier/src/main.rs`, not produced by generator. Dead code.

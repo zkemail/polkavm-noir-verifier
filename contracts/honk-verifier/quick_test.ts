@@ -10,8 +10,8 @@ async function main() {
   const { address } = JSON.parse(fs.readFileSync('deployment.json', 'utf8'));
   console.log('Contract:', address);
 
-  const proofBytes = fs.readFileSync('../circuit/target/proof');
-  const pubInputBytes = fs.readFileSync('../circuit/target/public_inputs');
+  const proofBytes = fs.readFileSync('../../circuit/target/proof');
+  const pubInputBytes = fs.readFileSync('../../circuit/target/public_inputs');
   const publicInputs: string[] = [];
   for (let i = 0; i < pubInputBytes.length; i += 32) {
     publicInputs.push('0x' + pubInputBytes.slice(i, i + 32).toString('hex'));

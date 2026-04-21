@@ -1,7 +1,7 @@
 extern crate alloc;
 use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};
-use crate::g1::G1Point;
+use crate::honk::g1::G1Point;
 
 /// G2 point in EVM pairing precompile format: (x_im, x_re, y_im, y_re) each 32 bytes.
 pub type G2Point = [u8; 128];

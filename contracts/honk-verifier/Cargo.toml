@@ -1,12 +1,17 @@
 [package]
-name = "honk-verifier-polkavm"
+name = "honk-verifier"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 name = "honk_verifier"
-path = "src/contract.rs"
+path = "src/main.rs"
 crate-type = ["cdylib"]
+
+# x86 test library — same modules, no PolkaVM target needed
+[[test]]
+name = "verify_test"
+path = "tests/verify_test.rs"
 
 [profile.release]
 opt-level = "s"

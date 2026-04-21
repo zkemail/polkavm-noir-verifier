@@ -15,9 +15,9 @@ async function callVerify(provider: ethers.JsonRpcProvider, address: string, pro
 
 async function main() {
   const { address } = JSON.parse(fs.readFileSync('deployment.json', 'utf8'));
-  const proofBytes = fs.readFileSync('../circuit/target/proof');
+  const proofBytes = fs.readFileSync('../../circuit/target/proof');
   const proofHex = '0x' + proofBytes.toString('hex');
-  const pubInputBytes = fs.readFileSync('../circuit/target/public_inputs');
+  const pubInputBytes = fs.readFileSync('../../circuit/target/public_inputs');
   const publicInputs: string[] = [];
   for (let i = 0; i < pubInputBytes.length; i += 32) {
     publicInputs.push('0x' + pubInputBytes.slice(i, i + 32).toString('hex'));

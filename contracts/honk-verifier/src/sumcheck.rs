@@ -1,7 +1,7 @@
-use crate::fr::Fr;
-use crate::proof::{Proof, BATCHED_RELATION_PARTIAL_LENGTH};
-use crate::relations::{accumulate_relation_evaluations, accumulate_relation_evaluations_raw, NUMBER_OF_SUBRELATIONS};
-use crate::transcript::Transcript;
+use crate::honk::fr::Fr;
+use crate::honk::proof::{Proof, BATCHED_RELATION_PARTIAL_LENGTH};
+use crate::honk::relations::{accumulate_relation_evaluations, accumulate_relation_evaluations_raw, NUMBER_OF_SUBRELATIONS};
+use crate::honk::transcript::Transcript;
 
 /// Barycentric Lagrange denominators (from Solidity BARYCENTRIC_LAGRANGE_DENOMINATORS)
 fn barycentric_lagrange_denominators() -> [Fr; BATCHED_RELATION_PARTIAL_LENGTH] {

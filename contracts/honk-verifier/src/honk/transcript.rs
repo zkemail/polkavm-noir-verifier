@@ -3,9 +3,9 @@ use alloc::vec::Vec;
 use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};
 
-use crate::fr::Fr;
-use crate::fr_utils::{fr_to_scalar, keccak256, split_challenge};
-use crate::proof::{
+use super::fr::Fr;
+use super::fr_utils::{fr_to_scalar, keccak256, split_challenge};
+use super::proof::{
     Proof, BATCHED_RELATION_PARTIAL_LENGTH, CONST_PROOF_SIZE_LOG_N, NUMBER_OF_ENTITIES,
 };
 

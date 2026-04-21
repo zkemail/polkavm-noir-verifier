@@ -1,6 +1,6 @@
 /// Utilities: keccak256, split-point Fq decoding, Fr/Fq byte helpers.
 use tiny_keccak::{Hasher, Keccak};
-use crate::fr::Fr;
+use super::fr::Fr;
 
 pub fn keccak256(input: &[u8]) -> [u8; 32] {
     let mut h = Keccak::v256();

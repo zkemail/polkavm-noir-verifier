@@ -2,14 +2,8 @@
 #![no_std]
 extern crate alloc;
 
-mod fr;
-mod fr_utils;
-mod g1;
-mod proof;
-mod relations;
-mod shplemini;
+mod honk;
 mod sumcheck;
-mod transcript;
 mod vk;
 
 use alloc::vec::Vec;
@@ -17,9 +11,9 @@ use polkavm_derive::polkavm_export;
 use simplealloc::SimpleAlloc;
 use uapi::{HostFn, HostFnImpl as api, ReturnFlags};
 
-use fr::Fr;
-use proof::load_proof;
-use transcript::generate_transcript;
+use honk::fr::Fr;
+use honk::proof::load_proof;
+use honk::transcript::generate_transcript;
 use vk::load_vk;
 
 #[global_allocator]
@@ -160,7 +154,7 @@ fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {
     // When code=200, also stores grand_sum+round_target in DIAG_GRAND_SUM for retrieval.
     let code = sumcheck::verify_sumcheck_diag(&proof, &t, LOG_N);
     if code == 200 {
-        use crate::fr_utils::fr_to_scalar;
+        use crate::honk::fr_utils::fr_to_scalar;
         // Return 1184 bytes: pow(32) + gate_chs[5](160) + sumcheck_chs[5](160) + evals[26](832)
         let (pow_partial_eval, gate_chs, sumcheck_chs, evals) = sumcheck::get_relation_evals_debug(&proof, &t);
         let mut out = [0u8; 1184]; // 37 field elements * 32 bytes
@@ -207,7 +201,7 @@ fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> bool {
         return false;
     }
 
-    shplemini::verify_shplemini(&proof, &vk, &t)
+    honk::shplemini::verify_shplemini(&proof, &vk, &t)
 }
 
 fn compute_public_input_delta(

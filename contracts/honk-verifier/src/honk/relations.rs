@@ -1,6 +1,6 @@
-use crate::fr::Fr;
-use crate::proof::NUMBER_OF_ENTITIES;
-use crate::transcript::{RelationParameters, NUMBER_OF_ALPHAS};
+use super::fr::Fr;
+use super::proof::NUMBER_OF_ENTITIES;
+use super::transcript::{RelationParameters, NUMBER_OF_ALPHAS};
 
 pub const NUMBER_OF_SUBRELATIONS: usize = 26;
 

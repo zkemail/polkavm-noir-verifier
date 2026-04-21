@@ -1,6 +1,6 @@
 use crate::honk::fr::Fr;
 use crate::honk::proof::{Proof, BATCHED_RELATION_PARTIAL_LENGTH};
-use crate::honk::relations::{accumulate_relation_evaluations, accumulate_relation_evaluations_raw, NUMBER_OF_SUBRELATIONS};
+use crate::honk::relations::accumulate_relation_evaluations;
 use crate::honk::transcript::Transcript;
 
 /// Barycentric Lagrange denominators (from Solidity BARYCENTRIC_LAGRANGE_DENOMINATORS)
@@ -95,18 +95,6 @@ fn partially_evaluate_pow(gate_challenge: Fr, current_evaluation: Fr, round_chal
     current_evaluation * univariate_eval
 }
 
-/// Returns: 0 = success, 100+round = check_sum failed at that round, 200 = final compare failed.
-pub fn get_denom0_pub() -> Fr {
-    barycentric_lagrange_denominators()[0]
-}
-
-pub fn compute_round0_target_pub(
-    round_univariates: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH],
-    challenge: Fr,
-) -> Fr {
-    compute_next_target_sum(round_univariates, challenge)
-}
-
 pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 {
     let mut round_target = Fr::zero();
     let mut pow_partial_evaluation = Fr::one();
@@ -160,109 +148,6 @@ pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 
     );
 
     if grand_honk_relation_sum != round_target { 200 } else { 0 }
-}
-
-/// Returns (grand_honk_relation_sum, round_target) as two Fr values for debugging.
-pub fn get_grand_sum_debug(proof: &Proof, t: &Transcript, _log_n: usize) -> (Fr, Fr) {
-    let mut round_target = Fr::zero();
-    let mut pow_partial_evaluation = Fr::one();
-
-    // Round 0
-    {
-        let u = &proof.sumcheck_univariates[0];
-        let ch = t.sumcheck_u_challenges[0];
-        round_target = compute_next_target_sum(u, ch);
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[0], pow_partial_evaluation, ch);
-    }
-    // Round 1
-    {
-        let u = &proof.sumcheck_univariates[1];
-        let ch = t.sumcheck_u_challenges[1];
-        round_target = compute_next_target_sum(u, ch);
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[1], pow_partial_evaluation, ch);
-    }
-    // Round 2
-    {
-        let u = &proof.sumcheck_univariates[2];
-        let ch = t.sumcheck_u_challenges[2];
-        round_target = compute_next_target_sum(u, ch);
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[2], pow_partial_evaluation, ch);
-    }
-    // Round 3
-    {
-        let u = &proof.sumcheck_univariates[3];
-        let ch = t.sumcheck_u_challenges[3];
-        round_target = compute_next_target_sum(u, ch);
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[3], pow_partial_evaluation, ch);
-    }
-    // Round 4
-    {
-        let u = &proof.sumcheck_univariates[4];
-        let ch = t.sumcheck_u_challenges[4];
-        round_target = compute_next_target_sum(u, ch);
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[4], pow_partial_evaluation, ch);
-    }
-
-    let grand_sum = accumulate_relation_evaluations(
-        &proof.sumcheck_evaluations,
-        &t.relation_parameters,
-        &t.alphas,
-        pow_partial_evaluation,
-    );
-
-    (grand_sum, round_target)
-}
-
-/// Returns (pow_partial_evaluation, gate_challenges[0..5], sumcheck_u_challenges[0..5], raw 26 sub-relation evaluations).
-pub fn get_relation_evals_debug(proof: &Proof, t: &Transcript) -> (Fr, [Fr; 5], [Fr; 5], [Fr; NUMBER_OF_SUBRELATIONS]) {
-    let mut pow_partial_evaluation = Fr::one();
-
-    // Round 0
-    {
-        let ch = t.sumcheck_u_challenges[0];
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[0], pow_partial_evaluation, ch);
-    }
-    // Round 1
-    {
-        let ch = t.sumcheck_u_challenges[1];
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[1], pow_partial_evaluation, ch);
-    }
-    // Round 2
-    {
-        let ch = t.sumcheck_u_challenges[2];
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[2], pow_partial_evaluation, ch);
-    }
-    // Round 3
-    {
-        let ch = t.sumcheck_u_challenges[3];
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[3], pow_partial_evaluation, ch);
-    }
-    // Round 4
-    {
-        let ch = t.sumcheck_u_challenges[4];
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[4], pow_partial_evaluation, ch);
-    }
-
-    let gate_chs = [
-        t.gate_challenges[0],
-        t.gate_challenges[1],
-        t.gate_challenges[2],
-        t.gate_challenges[3],
-        t.gate_challenges[4],
-    ];
-    let sumcheck_chs = [
-        t.sumcheck_u_challenges[0],
-        t.sumcheck_u_challenges[1],
-        t.sumcheck_u_challenges[2],
-        t.sumcheck_u_challenges[3],
-        t.sumcheck_u_challenges[4],
-    ];
-    let evals = accumulate_relation_evaluations_raw(
-        &proof.sumcheck_evaluations,
-        &t.relation_parameters,
-        pow_partial_evaluation,
-    );
-    (pow_partial_evaluation, gate_chs, sumcheck_chs, evals)
 }
 
 pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {

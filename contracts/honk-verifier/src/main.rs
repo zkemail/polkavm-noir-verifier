@@ -142,39 +142,6 @@ fn handle_verify(length: usize) {
     }
 }
 
-fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {
-    let vk = load_vk();
-    let proof = load_proof(proof_bytes);
-    let t = generate_transcript(&proof, public_inputs, vk.circuit_size, vk.public_inputs_size, vk.pub_inputs_offset);
-    let mut t = t;
-    t.relation_parameters.public_inputs_delta = compute_public_input_delta(
-        public_inputs, t.relation_parameters.beta, t.relation_parameters.gamma,
-        vk.pub_inputs_offset, vk.circuit_size, vk.public_inputs_size,
-    );
-    // Returns: 0=sumcheck pass, 100+round=check_sum fail at round, 200=final compare fail
-    // NOTE: shplemini skipped here — precompile calls break eth_call on Paseo.
-    // When code=200, also stores grand_sum+round_target in DIAG_GRAND_SUM for retrieval.
-    let code = sumcheck::verify_sumcheck_diag(&proof, &t, LOG_N);
-    if code == 200 {
-        use crate::honk::fr_utils::fr_to_scalar;
-        // Return 1184 bytes: pow(32) + gate_chs[5](160) + sumcheck_chs[5](160) + evals[26](832)
-        let (pow_partial_eval, gate_chs, sumcheck_chs, evals) = sumcheck::get_relation_evals_debug(&proof, &t);
-        let mut out = [0u8; 1184]; // 37 field elements * 32 bytes
-        out[0..32].copy_from_slice(&fr_to_scalar(pow_partial_eval));
-        for (chunk, gc) in out[32..192].chunks_mut(32).zip(gate_chs.iter()) {
-            chunk.copy_from_slice(&fr_to_scalar(*gc));
-        }
-        for (chunk, sc) in out[192..352].chunks_mut(32).zip(sumcheck_chs.iter()) {
-            chunk.copy_from_slice(&fr_to_scalar(*sc));
-        }
-        for (chunk, ev) in out[352..].chunks_mut(32).zip(evals.iter()) {
-            chunk.copy_from_slice(&fr_to_scalar(*ev));
-        }
-        api::return_value(ReturnFlags::empty(), &out);
-    }
-    code
-}
-
 fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> bool {
     // All large structs boxed to keep do_verify's stack frame minimal (~50 bytes of pointers).
     let vk = load_vk();           // Box<VerificationKey> ~1.8KB on heap

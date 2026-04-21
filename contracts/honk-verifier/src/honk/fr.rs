@@ -93,19 +93,7 @@ impl Fr {
         Some(Fr(mont_mul(&inv, &R2)))
     }
 
-    /// Square: self * self
-    pub fn square(self) -> Fr {
-        Fr(mont_mul(&self.0, &self.0))
-    }
 }
-
-/// P - 2, for Fermat inversion
-const P_MINUS_2: [u64; 4] = [
-    0x43e1f593efffffff,
-    0x2833e84879b97091,
-    0xb85045b68181585d,
-    0x30644e72e131a029,
-];
 
 impl Add for Fr {
     type Output = Fr;
@@ -323,28 +311,6 @@ fn reduce_once(a: &[u64; 4], m: &[u64; 4]) -> [u64; 4] {
     } else {
         *a // a < m, keep as is
     }
-}
-
-/// Public test wrapper for pow (still used for diagnostic)
-pub fn pow_pub(base: Fr, exp: &[u64; 4]) -> Fr {
-    pow(base, exp)
-}
-
-/// Square-and-multiply exponentiation (kept for non-inverse uses if needed)
-fn pow(base: Fr, exp: &[u64; 4]) -> Fr {
-    let mut result = Fr::ONE;
-    let mut b = base;
-    for limb_idx in 0..4usize {
-        let mut e = exp[limb_idx];
-        for _ in 0..64usize {
-            if e & 1 == 1 {
-                result = result * b;
-            }
-            b = b.square();
-            e >>= 1;
-        }
-    }
-    result
 }
 
 // ─── Binary extended GCD modular inverse ────────────────────────────────────

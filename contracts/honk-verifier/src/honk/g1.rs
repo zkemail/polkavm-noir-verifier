@@ -149,15 +149,3 @@ fn call_precompile(addr: u8, input: &[u8], output: &mut [u8]) {
         Some(&mut output_ref),
     );
 }
-
-/// Multi-scalar multiplication: sum of scalars[i] * points[i]
-/// scalars are Fr elements as big-endian 32 bytes
-pub fn msm(points: &[G1Point], scalars: &[[u8; 32]]) -> G1Point {
-    assert_eq!(points.len(), scalars.len());
-    let mut acc = G1Point::infinity();
-    for (p, s) in points.iter().zip(scalars.iter()) {
-        let term = ec_mul(*p, s);
-        acc = ec_add(acc, term);
-    }
-    acc
-}

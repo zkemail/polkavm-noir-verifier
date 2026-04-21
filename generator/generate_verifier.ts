@@ -507,37 +507,9 @@ function generateSumcheckRs(parsed: ParsedSol): string {
     return rounds.join('\n');
   }
 
-  function generatePowRounds(): string {
-    const rounds: string[] = [];
-    for (let i = 0; i < logN; i++) {
-      rounds.push(`    // Round ${i}
-    {
-        let ch = t.sumcheck_u_challenges[${i}];
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[${i}], pow_partial_evaluation, ch);
-    }`);
-    }
-    return rounds.join('\n');
-  }
-
-  function generateGateChallengesArray(): string {
-    const entries = [];
-    for (let i = 0; i < logN; i++) {
-      entries.push(`        t.gate_challenges[${i}],`);
-    }
-    return entries.join('\n');
-  }
-
-  function generateSumcheckChallengesArray(): string {
-    const entries = [];
-    for (let i = 0; i < logN; i++) {
-      entries.push(`        t.sumcheck_u_challenges[${i}],`);
-    }
-    return entries.join('\n');
-  }
-
   return `use crate::honk::fr::Fr;
 use crate::honk::proof::{Proof, BATCHED_RELATION_PARTIAL_LENGTH};
-use crate::honk::relations::{accumulate_relation_evaluations, accumulate_relation_evaluations_raw, NUMBER_OF_SUBRELATIONS};
+use crate::honk::relations::accumulate_relation_evaluations;
 use crate::honk::transcript::Transcript;
 
 /// Barycentric Lagrange denominators (from Solidity BARYCENTRIC_LAGRANGE_DENOMINATORS)
@@ -632,18 +604,6 @@ fn partially_evaluate_pow(gate_challenge: Fr, current_evaluation: Fr, round_chal
     current_evaluation * univariate_eval
 }
 
-/// Returns: 0 = success, 100+round = check_sum failed at that round, 200 = final compare failed.
-pub fn get_denom0_pub() -> Fr {
-    barycentric_lagrange_denominators()[0]
-}
-
-pub fn compute_round0_target_pub(
-    round_univariates: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH],
-    challenge: Fr,
-) -> Fr {
-    compute_next_target_sum(round_univariates, challenge)
-}
-
 pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 {
     let mut round_target = Fr::zero();
     let mut pow_partial_evaluation = Fr::one();
@@ -658,43 +618,6 @@ ${generateRounds(true, true)}
     );
 
     if grand_honk_relation_sum != round_target { 200 } else { 0 }
-}
-
-/// Returns (grand_honk_relation_sum, round_target) as two Fr values for debugging.
-pub fn get_grand_sum_debug(proof: &Proof, t: &Transcript, _log_n: usize) -> (Fr, Fr) {
-    let mut round_target = Fr::zero();
-    let mut pow_partial_evaluation = Fr::one();
-
-${generateRounds(false, false)}
-
-    let grand_sum = accumulate_relation_evaluations(
-        &proof.sumcheck_evaluations,
-        &t.relation_parameters,
-        &t.alphas,
-        pow_partial_evaluation,
-    );
-
-    (grand_sum, round_target)
-}
-
-/// Returns (pow_partial_evaluation, gate_challenges[0..${logN}], sumcheck_u_challenges[0..${logN}], raw 26 sub-relation evaluations).
-pub fn get_relation_evals_debug(proof: &Proof, t: &Transcript) -> (Fr, [Fr; ${logN}], [Fr; ${logN}], [Fr; NUMBER_OF_SUBRELATIONS]) {
-    let mut pow_partial_evaluation = Fr::one();
-
-${generatePowRounds()}
-
-    let gate_chs = [
-${generateGateChallengesArray()}
-    ];
-    let sumcheck_chs = [
-${generateSumcheckChallengesArray()}
-    ];
-    let evals = accumulate_relation_evaluations_raw(
-        &proof.sumcheck_evaluations,
-        &t.relation_parameters,
-        pow_partial_evaluation,
-    );
-    (pow_partial_evaluation, gate_chs, sumcheck_chs, evals)
 }
 
 pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {

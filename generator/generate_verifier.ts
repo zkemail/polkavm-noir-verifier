@@ -224,34 +224,25 @@ pub fn g2_kzg_srs() -> G2Point {
 }
 
 // --- Calculate required heap size ---
-// Conservative estimate of peak heap usage across the verify call.
-// With picoalloc (TLSF), Vecs are freed when dropped, but we size for
-// the worst case where all allocations are live simultaneously.
+// Conservative estimate: all allocations assumed live simultaneously.
+// Picoalloc (TLSF) frees on drop, but handle_verify holds data_vec,
+// proof_bytes, pub_inputs in scope while do_verify runs.
+// Streaming keccak eliminated all transcript Vec allocations.
 function calculateHeapKB(numPublicInputs: number): number {
   const CONST_PROOF_SIZE_LOG_N = 28;
   const NUMBER_OF_ENTITIES = 40;
+  const OH = 32; // picoalloc per-allocation overhead
 
-  // calldata copy
-  const dataVec = 64 + 32 + 14080 + 32 + 32 + numPublicInputs * 32;
-  const proofBytesCopy = 14080;
-  const pubInputsVec = numPublicInputs * 32;
+  // All simultaneously live during shplemini verification:
+  const dataVec = 160 + 14080 + numPublicInputs * 32 + OH;
+  const proofBytesCopy = 14080 + OH;
+  const pubInputsVec = numPublicInputs * 32 + OH;
+  const structs = (1900 + OH) + (14080 + OH) + (2900 + OH); // VK + Proof + Transcript
+  const shplemini = (CONST_PROOF_SIZE_LOG_N * 32 + OH) * 2  // squares + fold_pos
+    + (NUMBER_OF_ENTITIES + CONST_PROOF_SIZE_LOG_N + 2) * 32 + OH  // scalars
+    + (NUMBER_OF_ENTITIES + CONST_PROOF_SIZE_LOG_N + 2) * 64 + OH; // commitments
 
-  // VK + Proof + Transcript structs
-  const structs = 1900 + 14080 + 3000;
-
-  // Transcript Vec allocations (bump-allocated, never freed)
-  const round0 = (3 + numPublicInputs + 12) * 32;
-  const hashBufs = round0 + 13*32 + 9*32 + 3*32 + 5*32; // round0,1,alpha,singles,z
-  const ucLoop = CONST_PROOF_SIZE_LOG_N * 9 * 32; // Vec per sumcheck round
-  const rho = (NUMBER_OF_ENTITIES + 1) * 32 * 2; // vec + hash buf
-  const gr = ((CONST_PROOF_SIZE_LOG_N - 1) * 4 + 1) * 32 * 2;
-  const nu = (CONST_PROOF_SIZE_LOG_N + 1) * 32 * 2;
-
-  // Shplemini
-  const shplemini = (NUMBER_OF_ENTITIES + CONST_PROOF_SIZE_LOG_N + 2) * (32 + 64) + CONST_PROOF_SIZE_LOG_N * 32 * 2;
-
-  const total = dataVec + proofBytesCopy + pubInputsVec + structs +
-                hashBufs + ucLoop + rho + gr + nu + shplemini;
+  const total = dataVec + proofBytesCopy + pubInputsVec + structs + shplemini;
 
   // Add 25% margin, round up to nearest 4KB
   const withMargin = Math.ceil(total * 1.25);

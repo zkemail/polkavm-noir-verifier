@@ -16,8 +16,8 @@ use honk::transcript::generate_transcript;
 use vk::load_vk;
 
 #[global_allocator]
-static mut ALLOC: picoalloc::Mutex<picoalloc::Allocator<picoalloc::ArrayPointer<{ 96 * 1024 }>>> = {
-    static mut ARRAY: picoalloc::Array<{ 96 * 1024 }> = picoalloc::Array([0u8; 96 * 1024]);
+static mut ALLOC: picoalloc::Mutex<picoalloc::Allocator<picoalloc::ArrayPointer<{ 72 * 1024 }>>> = {
+    static mut ARRAY: picoalloc::Array<{ 72 * 1024 }> = picoalloc::Array([0u8; 72 * 1024]);
     picoalloc::Mutex::new(picoalloc::Allocator::new(unsafe {
         picoalloc::ArrayPointer::new(&raw mut ARRAY)
     }))

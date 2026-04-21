@@ -156,11 +156,25 @@ fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {
         public_inputs, t.relation_parameters.beta, t.relation_parameters.gamma,
         vk.pub_inputs_offset, vk.circuit_size, vk.public_inputs_size,
     );
-    // Returns: 0=success, 100+round=check_sum fail at round, 200=final compare fail, 255=shplemini fail
-    let sc = sumcheck::verify_sumcheck_diag(&proof, &t, LOG_N);
-    if sc != 0 { return sc; }
-    if !shplemini::verify_shplemini(&proof, &vk, &t) { return 255; }
-    0
+    // Returns: 0=sumcheck pass, 100+round=check_sum fail at round, 200=final compare fail
+    // NOTE: shplemini skipped here — precompile calls break eth_call on Paseo.
+    // When code=200, also stores grand_sum+round_target in DIAG_GRAND_SUM for retrieval.
+    let code = sumcheck::verify_sumcheck_diag(&proof, &t, LOG_N);
+    if code == 200 {
+        // Return 64 bytes: grand_sum || round_target for debugging
+        let (grand_sum, round_target) = sumcheck::get_grand_sum_debug(&proof, &t, LOG_N);
+        use crate::fr_utils::fr_to_scalar;
+        let mut out = [0u8; 128];
+        out[0..32].copy_from_slice(&fr_to_scalar(grand_sum));
+        out[32..64].copy_from_slice(&fr_to_scalar(round_target));
+        // bytes 64-95: proof.sumcheck_evaluations[0] (verifies proof parsing)
+        out[64..96].copy_from_slice(&fr_to_scalar(proof.sumcheck_evaluations[0]));
+        // bytes 96-127: t.alphas[0] (verifies transcript)
+        out[96..128].copy_from_slice(&fr_to_scalar(t.alphas[0]));
+        api::return_value(ReturnFlags::empty(), &out);
+        return 0; // unreachable but keeps type
+    }
+    code
 }
 
 fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> bool {
@@ -207,8 +221,8 @@ fn compute_public_input_delta(
     let mut numerator_acc = gamma + beta * Fr::from_u64(n + offset);
     let mut denominator_acc = gamma - beta * Fr::from_u64(offset + 1);
 
-    for i in 0..num_public_inputs as usize {
-        let pub_input = Fr::from_be_bytes(&public_inputs[i]);
+    for pi in public_inputs.iter() {
+        let pub_input = Fr::from_be_bytes(pi);
         numerator = numerator * (numerator_acc + pub_input);
         denominator = denominator * (denominator_acc + pub_input);
         numerator_acc = numerator_acc + beta;

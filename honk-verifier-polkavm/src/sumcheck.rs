@@ -26,8 +26,8 @@ fn fr_from_hex(hex: &str) -> Fr {
         s[pad..].copy_from_slice(src);
         // Safety: we filled it with ASCII digits
         let mut bytes = [0u8; 32];
-        for i in 0..32 {
-            bytes[i] = nibble(s[i * 2]) << 4 | nibble(s[i * 2 + 1]);
+        for (byte, pair) in bytes.iter_mut().zip(s.chunks(2)) {
+            *byte = nibble(pair[0]) << 4 | nibble(pair[1]);
         }
         return Fr::from_be_bytes(&bytes);
     } else {
@@ -35,8 +35,8 @@ fn fr_from_hex(hex: &str) -> Fr {
     };
     let b = hex.as_bytes();
     let mut bytes = [0u8; 32];
-    for i in 0..32 {
-        bytes[i] = nibble(b[i * 2]) << 4 | nibble(b[i * 2 + 1]);
+    for (byte, pair) in bytes.iter_mut().zip(b.chunks(2)) {
+        *byte = nibble(pair[0]) << 4 | nibble(pair[1]);
     }
     Fr::from_be_bytes(&bytes)
 }
@@ -107,22 +107,49 @@ pub fn compute_round0_target_pub(
     compute_next_target_sum(round_univariates, challenge)
 }
 
-pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, log_n: usize) -> u8 {
+pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 {
     let mut round_target = Fr::zero();
     let mut pow_partial_evaluation = Fr::one();
 
-    for round in 0..log_n {
-        let round_univariate = &proof.sumcheck_univariates[round];
-        if !check_sum(round_univariate, round_target) {
-            return 100 + round as u8;
-        }
-        let round_challenge = t.sumcheck_u_challenges[round];
-        round_target = compute_next_target_sum(round_univariate, round_challenge);
-        pow_partial_evaluation = partially_evaluate_pow(
-            t.gate_challenges[round],
-            pow_partial_evaluation,
-            round_challenge,
-        );
+    // Round 0
+    {
+        let u = &proof.sumcheck_univariates[0];
+        if !check_sum(u, round_target) { return 100; }
+        let ch = t.sumcheck_u_challenges[0];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[0], pow_partial_evaluation, ch);
+    }
+    // Round 1
+    {
+        let u = &proof.sumcheck_univariates[1];
+        if !check_sum(u, round_target) { return 101; }
+        let ch = t.sumcheck_u_challenges[1];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[1], pow_partial_evaluation, ch);
+    }
+    // Round 2
+    {
+        let u = &proof.sumcheck_univariates[2];
+        if !check_sum(u, round_target) { return 102; }
+        let ch = t.sumcheck_u_challenges[2];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[2], pow_partial_evaluation, ch);
+    }
+    // Round 3
+    {
+        let u = &proof.sumcheck_univariates[3];
+        if !check_sum(u, round_target) { return 103; }
+        let ch = t.sumcheck_u_challenges[3];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[3], pow_partial_evaluation, ch);
+    }
+    // Round 4
+    {
+        let u = &proof.sumcheck_univariates[4];
+        if !check_sum(u, round_target) { return 104; }
+        let ch = t.sumcheck_u_challenges[4];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[4], pow_partial_evaluation, ch);
     }
 
     let grand_honk_relation_sum = accumulate_relation_evaluations(
@@ -133,6 +160,57 @@ pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, log_n: usize) -> u8 {
     );
 
     if grand_honk_relation_sum != round_target { 200 } else { 0 }
+}
+
+/// Returns (grand_honk_relation_sum, round_target) as two Fr values for debugging.
+pub fn get_grand_sum_debug(proof: &Proof, t: &Transcript, _log_n: usize) -> (Fr, Fr) {
+    let mut round_target = Fr::zero();
+    let mut pow_partial_evaluation = Fr::one();
+
+    // Round 0
+    {
+        let u = &proof.sumcheck_univariates[0];
+        let ch = t.sumcheck_u_challenges[0];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[0], pow_partial_evaluation, ch);
+    }
+    // Round 1
+    {
+        let u = &proof.sumcheck_univariates[1];
+        let ch = t.sumcheck_u_challenges[1];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[1], pow_partial_evaluation, ch);
+    }
+    // Round 2
+    {
+        let u = &proof.sumcheck_univariates[2];
+        let ch = t.sumcheck_u_challenges[2];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[2], pow_partial_evaluation, ch);
+    }
+    // Round 3
+    {
+        let u = &proof.sumcheck_univariates[3];
+        let ch = t.sumcheck_u_challenges[3];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[3], pow_partial_evaluation, ch);
+    }
+    // Round 4
+    {
+        let u = &proof.sumcheck_univariates[4];
+        let ch = t.sumcheck_u_challenges[4];
+        round_target = compute_next_target_sum(u, ch);
+        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[4], pow_partial_evaluation, ch);
+    }
+
+    let grand_sum = accumulate_relation_evaluations(
+        &proof.sumcheck_evaluations,
+        &t.relation_parameters,
+        &t.alphas,
+        pow_partial_evaluation,
+    );
+
+    (grand_sum, round_target)
 }
 
 pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {

@@ -147,11 +147,11 @@ pub fn generate_transcript(
     alphas[0] = a0;
     alphas[1] = a1;
 
-    for i in 1..NUMBER_OF_ALPHAS / 2 {
+    for chunk in alphas[2..NUMBER_OF_ALPHAS - 1].chunks_mut(2) {
         prev = hash_single(prev);
         let (a_even, a_odd) = split_challenge(prev);
-        alphas[2 * i] = a_even;
-        alphas[2 * i + 1] = a_odd;
+        chunk[0] = a_even;
+        chunk[1] = a_odd;
     }
     // NUMBER_OF_ALPHAS = 25 (odd), one more alpha needed
     if (NUMBER_OF_ALPHAS & 1) == 1 && NUMBER_OF_ALPHAS > 2 {
@@ -161,32 +161,33 @@ pub fn generate_transcript(
     }
 
     // --- Gate challenges ---
+    // Use iter_mut() to avoid integer index variable (compiler bug workaround).
     let mut gate_challenges = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
-    for i in 0..CONST_PROOF_SIZE_LOG_N {
+    for gc_dst in gate_challenges.iter_mut() {
         prev = hash_single(prev);
         let (gc, _) = split_challenge(prev);
-        gate_challenges[i] = gc;
+        *gc_dst = gc;
     }
 
     // --- Sumcheck U challenges ---
     let mut sumcheck_u_challenges = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
-    for i in 0..CONST_PROOF_SIZE_LOG_N {
+    for (sc_dst, univariates) in sumcheck_u_challenges.iter_mut().zip(proof.sumcheck_univariates.iter()) {
         let mut uc: Vec<u8> = Vec::with_capacity(9 * 32);
         uc.extend_from_slice(&fr_to_scalar(prev));
-        for j in 0..BATCHED_RELATION_PARTIAL_LENGTH {
-            uc.extend_from_slice(&fr_to_scalar(proof.sumcheck_univariates[i][j]));
+        for elem in univariates.iter() {
+            uc.extend_from_slice(&fr_to_scalar(*elem));
         }
         let h = keccak256(&uc);
         prev = Fr::from_be_bytes(&h);
         let (sc, _) = split_challenge(prev);
-        sumcheck_u_challenges[i] = sc;
+        *sc_dst = sc;
     }
 
     // --- Rho challenge ---
     let mut rho_elems: Vec<[u8; 32]> = Vec::with_capacity(NUMBER_OF_ENTITIES + 1);
     rho_elems.push(fr_to_scalar(prev));
-    for i in 0..NUMBER_OF_ENTITIES {
-        rho_elems.push(fr_to_scalar(proof.sumcheck_evaluations[i]));
+    for eval in proof.sumcheck_evaluations.iter() {
+        rho_elems.push(fr_to_scalar(*eval));
     }
     prev = hash_u256s(&rho_elems);
     let (rho, _) = split_challenge(prev);
@@ -194,11 +195,11 @@ pub fn generate_transcript(
     // --- Gemini R challenge ---
     let mut gr: Vec<[u8; 32]> = Vec::with_capacity((CONST_PROOF_SIZE_LOG_N - 1) * 4 + 1);
     gr.push(fr_to_scalar(prev));
-    for i in 0..CONST_PROOF_SIZE_LOG_N - 1 {
-        gr.push(proof.gemini_fold_comms[i].x_0);
-        gr.push(proof.gemini_fold_comms[i].x_1);
-        gr.push(proof.gemini_fold_comms[i].y_0);
-        gr.push(proof.gemini_fold_comms[i].y_1);
+    for comm in proof.gemini_fold_comms.iter() {
+        gr.push(comm.x_0);
+        gr.push(comm.x_1);
+        gr.push(comm.y_0);
+        gr.push(comm.y_1);
     }
     prev = hash_u256s(&gr);
     let (gemini_r, _) = split_challenge(prev);
@@ -206,8 +207,8 @@ pub fn generate_transcript(
     // --- Shplonk Nu challenge ---
     let mut nu_elems: Vec<[u8; 32]> = Vec::with_capacity(CONST_PROOF_SIZE_LOG_N + 1);
     nu_elems.push(fr_to_scalar(prev));
-    for i in 0..CONST_PROOF_SIZE_LOG_N {
-        nu_elems.push(fr_to_scalar(proof.gemini_a_evaluations[i]));
+    for eval in proof.gemini_a_evaluations.iter() {
+        nu_elems.push(fr_to_scalar(*eval));
     }
     prev = hash_u256s(&nu_elems);
     let (shplonk_nu, _) = split_challenge(prev);

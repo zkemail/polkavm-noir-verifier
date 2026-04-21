@@ -57,10 +57,8 @@ fn fr(v: u64) -> Fr {
 fn fr_from_hex(hex: &str) -> Fr {
     let mut bytes = [0u8; 32];
     let b = hex.as_bytes();
-    for i in 0..32 {
-        let hi = nibble(b[i * 2]);
-        let lo = nibble(b[i * 2 + 1]);
-        bytes[i] = (hi << 4) | lo;
+    for (byte, pair) in bytes.iter_mut().zip(b.chunks(2)) {
+        *byte = (nibble(pair[0]) << 4) | nibble(pair[1]);
     }
     Fr::from_be_bytes(&bytes)
 }
@@ -74,14 +72,15 @@ fn nibble(b: u8) -> u8 {
     }
 }
 
-/// Compute 2^exp as Fr
-fn two_pow(exp: u32) -> Fr {
-    let mut r = Fr::one();
-    let two = fr(2);
-    for _ in 0..exp {
-        r = r * two;
-    }
-    r
+/// 2^68 as Fr (hardcoded to avoid runtime variable-bound loop which is broken on this target)
+fn limb_size_const() -> Fr {
+    // 2^68 in big-endian 32 bytes
+    Fr::from_be_bytes(&[0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0x10, 0,0,0,0,0,0,0,0])
+}
+
+/// 2^14 as Fr (hardcoded)
+fn sublimb_shift_const() -> Fr {
+    Fr::from_u64(1u64 << 14)
 }
 
 /// Ultra Arithmetic Relation (2 subrelations: evals[0], evals[1])
@@ -290,8 +289,8 @@ fn accumulate_auxiliary(
     evals: &mut [Fr; NUMBER_OF_SUBRELATIONS],
     domain_sep: Fr,
 ) {
-    let limb_size = two_pow(68);
-    let sublimb_shift = two_pow(14);
+    let limb_size = limb_size_const();
+    let sublimb_shift = sublimb_shift_const();
     let minus_one = -Fr::one();
 
     let limb_subproduct =
@@ -474,8 +473,8 @@ fn scale_and_batch(
     alphas: &[Fr; NUMBER_OF_ALPHAS],
 ) -> Fr {
     let mut acc = evaluations[0];
-    for i in 1..NUMBER_OF_SUBRELATIONS {
-        acc = acc + evaluations[i] * alphas[i - 1];
+    for (eval, alpha) in evaluations[1..].iter().zip(alphas.iter()) {
+        acc = acc + *eval * *alpha;
     }
     acc
 }

@@ -80,34 +80,36 @@ pub fn load_proof(data: &[u8]) -> Box<Proof> {
     p.lookup_inverses = read_g1pp(&data[0x300..]);
     p.z_perm = read_g1pp(&data[0x380..]);
 
-    let mut boundary = 0x400usize;
+    // Use slice-advancing pattern (no integer index variable) to avoid compiler
+    // bug where `for i in 0..N { use i }` generates wrong code on this target.
+    let mut cur = &data[0x400..];
 
-    for i in 0..CONST_PROOF_SIZE_LOG_N {
-        for j in 0..BATCHED_RELATION_PARTIAL_LENGTH {
-            p.sumcheck_univariates[i][j] = read_fr(&data[boundary..]);
-            boundary += 32;
+    for row in p.sumcheck_univariates.iter_mut() {
+        for elem in row.iter_mut() {
+            *elem = read_fr(cur);
+            cur = &cur[32..];
         }
     }
 
-    for i in 0..NUMBER_OF_ENTITIES {
-        p.sumcheck_evaluations[i] = read_fr(&data[boundary..]);
-        boundary += 32;
+    for elem in p.sumcheck_evaluations.iter_mut() {
+        *elem = read_fr(cur);
+        cur = &cur[32..];
     }
 
-    for i in 0..CONST_PROOF_SIZE_LOG_N - 1 {
-        p.gemini_fold_comms[i] = read_g1pp(&data[boundary..]);
-        boundary += 128;
+    for comm in p.gemini_fold_comms.iter_mut() {
+        *comm = read_g1pp(cur);
+        cur = &cur[128..];
     }
 
-    for i in 0..CONST_PROOF_SIZE_LOG_N {
-        p.gemini_a_evaluations[i] = read_fr(&data[boundary..]);
-        boundary += 32;
+    for elem in p.gemini_a_evaluations.iter_mut() {
+        *elem = read_fr(cur);
+        cur = &cur[32..];
     }
 
-    p.shplonk_q = read_g1pp(&data[boundary..]);
-    boundary += 128;
-    p.kzg_quotient = read_g1pp(&data[boundary..]);
-    let _ = boundary;
+    p.shplonk_q = read_g1pp(cur);
+    cur = &cur[128..];
+    p.kzg_quotient = read_g1pp(cur);
+    let _ = cur;
 
     unsafe { Box::from_raw(ptr) }
 }

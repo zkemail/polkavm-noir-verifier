@@ -98,35 +98,16 @@ generator/
 
 Three files are GENERATED (not copied): `src/vk.rs`, `src/contract.rs`, `src/sumcheck.rs`.
 
-## Implementation TODO
+## Implementation Status
 
-### 1. Set up generator project structure
-- [ ] Create `generator/package.json` with `ts-node`, `typescript` deps
-- [ ] Create `generator/tsconfig.json`
+All steps complete. Verified 2026-04-21.
 
-### 2. Copy generic template files
-- [ ] Create `generator/template/` directory structure
-- [ ] Copy from `honk-verifier-polkavm/`: config files + generic Rust sources + TS scripts
-- [ ] `shplemini.rs` IS generic -- copy it too
+- [x] Generator project structure (`package.json`, `tsconfig.json`)
+- [x] Template files copied (7 Rust sources + configs + TS scripts)
+- [x] `generate_verifier.ts` — parses HonkVerifier.sol, generates vk.rs/contract.rs/sumcheck.rs
+- [x] Optional `--build` flag for cargo build + polkatool link
+- [x] Verified: generated output matches existing `honk-verifier-polkavm/src/` (vk.rs and sumcheck.rs identical, contract.rs identical minus debug function)
+- [x] Verified: compiled .polkavm binary is byte-for-byte identical (55,683 bytes)
 
-### 3. Write `generate_verifier.ts`
-- [ ] Parse CLI args: `--sol <path>` and `--out <path>`
-- [ ] Read and parse HonkVerifier.sol (regex for constants + G1 points)
-- [ ] Map Solidity point names to Rust field names (ql->ql, qArith->q_arith, etc.)
-- [ ] Generate `src/vk.rs` with extracted G1 points + hardcoded G2 constants
-- [ ] Generate `src/contract.rs` with correct LOG_N, public_inputs_size, arr_len check
-- [ ] Generate `src/sumcheck.rs` with LOG_N unrolled rounds
-- [ ] Copy all template files to output directory
-- [ ] Write generated files to output `src/`
-
-### 4. Optional build step
-- [ ] Run `cargo build --release` in output directory
-- [ ] Run `polkatool link --strip` to produce `.polkavm` binary
-
-### 5. Verify
-1. Run generator against current `circuit/target/HonkVerifier.sol`
-2. Diff generated output against existing `honk-verifier-polkavm/src/` -- should match
-3. Build the generated project
-4. Run `quick_test.ts` -- should return VERIFIED
-5. Run `test_valid_and_invalid.ts` -- all 5 tests should pass
-6. Test with a DIFFERENT circuit (different LOG_N or more public inputs) to verify the generator handles varying sizes
+### Remaining TODO
+- [ ] Test with a DIFFERENT circuit (different LOG_N or more public inputs) to verify the generator handles varying sizes

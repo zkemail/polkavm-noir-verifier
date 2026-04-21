@@ -223,6 +223,41 @@ pub fn g2_kzg_srs() -> G2Point {
 `;
 }
 
+// --- Calculate required heap size ---
+// SimpleAlloc is a bump allocator (never frees). We must account for ALL allocations
+// across the entire verify call: calldata copy, proof parsing, transcript generation
+// (multiple Vecs that are never freed), and shplemini.
+function calculateHeapKB(numPublicInputs: number): number {
+  const CONST_PROOF_SIZE_LOG_N = 28;
+  const NUMBER_OF_ENTITIES = 40;
+
+  // calldata copy
+  const dataVec = 64 + 32 + 14080 + 32 + 32 + numPublicInputs * 32;
+  const proofBytesCopy = 14080;
+  const pubInputsVec = numPublicInputs * 32;
+
+  // VK + Proof + Transcript structs
+  const structs = 1900 + 14080 + 3000;
+
+  // Transcript Vec allocations (bump-allocated, never freed)
+  const round0 = (3 + numPublicInputs + 12) * 32;
+  const hashBufs = round0 + 13*32 + 9*32 + 3*32 + 5*32; // round0,1,alpha,singles,z
+  const ucLoop = CONST_PROOF_SIZE_LOG_N * 9 * 32; // Vec per sumcheck round
+  const rho = (NUMBER_OF_ENTITIES + 1) * 32 * 2; // vec + hash buf
+  const gr = ((CONST_PROOF_SIZE_LOG_N - 1) * 4 + 1) * 32 * 2;
+  const nu = (CONST_PROOF_SIZE_LOG_N + 1) * 32 * 2;
+
+  // Shplemini
+  const shplemini = (NUMBER_OF_ENTITIES + CONST_PROOF_SIZE_LOG_N + 2) * (32 + 64) + CONST_PROOF_SIZE_LOG_N * 32 * 2;
+
+  const total = dataVec + proofBytesCopy + pubInputsVec + structs +
+                hashBufs + ucLoop + rho + gr + nu + shplemini;
+
+  // Add 25% margin, round up to nearest 4KB
+  const withMargin = Math.ceil(total * 1.25);
+  return Math.ceil(withMargin / 4096) * 4;
+}
+
 // --- Generate contract.rs ---
 function generateContractRs(parsed: ParsedSol): string {
   const numPub = parsed.NUMBER_OF_PUBLIC_INPUTS;
@@ -239,6 +274,8 @@ function generateContractRs(parsed: ParsedSol): string {
     }
     pubInputParsing = lines.join('\n');
   }
+
+  const heapKB = calculateHeapKB(numPub);
 
   return `#![no_main]
 #![no_std]
@@ -265,7 +302,7 @@ use transcript::generate_transcript;
 use vk::load_vk;
 
 #[global_allocator]
-static ALLOCATOR: SimpleAlloc<{ 96 * 1024 }> = SimpleAlloc::new();
+static ALLOCATOR: SimpleAlloc<{ ${heapKB} * 1024 }> = SimpleAlloc::new(); // ${heapKB}KB heap for ${numPub} public inputs
 
 /// Function selector for verify(bytes,bytes32[]) = 0xea50d0e4
 const VERIFY_SELECTOR: [u8; 4] = [0xea, 0x50, 0xd0, 0xe4];
@@ -723,7 +760,7 @@ function main() {
       execSync('cargo build --release', { cwd: outDir, stdio: 'inherit' });
       const binName = 'honk_verifier';
       execSync(
-        `polkatool link --strip --output ${binName}.polkavm target/riscv64emac-unknown-none-polkavm/release/${binName}.elf`,
+        `polkatool link --strip --min-stack-size 65536 --output ${binName}.polkavm target/riscv64emac-unknown-none-polkavm/release/${binName}.elf`,
         { cwd: outDir, stdio: 'inherit' }
       );
       console.log('Build complete!');

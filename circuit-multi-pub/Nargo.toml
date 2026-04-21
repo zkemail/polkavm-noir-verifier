@@ -1,0 +1,6 @@
+[package]
+name = "circuit_multi_pub"
+type = "bin"
+authors = [""]
+
+[dependencies]

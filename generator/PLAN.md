@@ -109,5 +109,11 @@ All steps complete. Verified 2026-04-21.
 - [x] Verified: generated output matches existing `honk-verifier-polkavm/src/` (vk.rs and sumcheck.rs identical, contract.rs identical minus debug function)
 - [x] Verified: compiled .polkavm binary is byte-for-byte identical (55,683 bytes)
 
+### Cross-circuit verification (2026-04-21)
+- [x] Tested with 4-public-input circuit (circuit-multi-pub): N=32, LOG_N=5, PUBLIC_INPUTS=4
+- Deployed to Paseo: `0xc4C41b5AD4f268C90d5f6d6Bac27ED93C3dde7FE`
+- Valid proof: verified; wrong input: rejected; corrupted proof: rejected
+- [x] Generator handles varying public input counts correctly
+
 ### Remaining TODO
-- [ ] Test with a DIFFERENT circuit (different LOG_N or more public inputs) to verify the generator handles varying sizes
+- [ ] Test with a circuit that has different LOG_N (larger circuit, e.g. LOG_N=10+)

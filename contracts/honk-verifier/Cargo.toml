@@ -16,7 +16,7 @@ path = "tests/verify_test.rs"
 [profile.release]
 codegen-units = 1
 lto = true
-opt-level = "z"
+opt-level = "s"
 panic = "abort"
 overflow-checks = false
 

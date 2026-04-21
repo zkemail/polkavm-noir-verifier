@@ -1,7 +1,7 @@
 /// G1 point arithmetic via PolkaVM EVM precompiles.
 /// ecAdd = 0x06, ecMul = 0x07, ecPairing = 0x08
 /// All points are in uncompressed affine form: (x, y) each 32 bytes big-endian (Fq).
-use uapi::{HostFn, HostFnImpl as api, CallFlags};
+use pallet_revive_uapi::{HostFn, HostFnImpl as api, CallFlags};
 
 /// A BN254 G1 affine point (uncompressed, big-endian field elements).
 #[derive(Clone, Copy, Debug)]
@@ -136,15 +136,15 @@ pub fn ec_pairing_check(
 
 fn call_precompile(addr: u8, input: &[u8], output: &mut [u8]) {
     let target = precompile_address(addr);
-    let gas = api::ref_time_left() / 2;
+    let gas = api::gas_left() / 2;
     let mut output_ref: &mut [u8] = output;
     let _ = api::call(
         CallFlags::empty(),
         &target,
         gas,
         u64::MAX,
-        &[0u8; 32],
-        &[0u8; 32],
+        &[0u8; 32], // deposit
+        &[0u8; 32], // value
         input,
         Some(&mut output_ref),
     );

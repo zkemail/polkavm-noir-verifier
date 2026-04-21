@@ -224,9 +224,9 @@ pub fn g2_kzg_srs() -> G2Point {
 }
 
 // --- Calculate required heap size ---
-// SimpleAlloc is a bump allocator (never frees). We must account for ALL allocations
-// across the entire verify call: calldata copy, proof parsing, transcript generation
-// (multiple Vecs that are never freed), and shplemini.
+// Conservative estimate of peak heap usage across the verify call.
+// With picoalloc (TLSF), Vecs are freed when dropped, but we size for
+// the worst case where all allocations are live simultaneously.
 function calculateHeapKB(numPublicInputs: number): number {
   const CONST_PROOF_SIZE_LOG_N = 28;
   const NUMBER_OF_ENTITIES = 40;
@@ -287,8 +287,7 @@ mod vk;
 
 use alloc::vec::Vec;
 use polkavm_derive::polkavm_export;
-use simplealloc::SimpleAlloc;
-use uapi::{HostFn, HostFnImpl as api, ReturnFlags};
+use pallet_revive_uapi::{HostFn, HostFnImpl as api, ReturnFlags};
 
 use honk::fr::Fr;
 use honk::proof::load_proof;
@@ -296,7 +295,12 @@ use honk::transcript::generate_transcript;
 use vk::load_vk;
 
 #[global_allocator]
-static ALLOCATOR: SimpleAlloc<{ ${heapKB} * 1024 }> = SimpleAlloc::new(); // ${heapKB}KB heap for ${numPub} public inputs
+static mut ALLOC: picoalloc::Mutex<picoalloc::Allocator<picoalloc::ArrayPointer<{ ${heapKB} * 1024 }>>> = {
+    static mut ARRAY: picoalloc::Array<{ ${heapKB} * 1024 }> = picoalloc::Array([0u8; ${heapKB} * 1024]);
+    picoalloc::Mutex::new(picoalloc::Allocator::new(unsafe {
+        picoalloc::ArrayPointer::new(&raw mut ARRAY)
+    }))
+}; // ${heapKB}KB heap for ${numPub} public inputs
 
 /// Function selector for verify(bytes,bytes32[]) = 0xea50d0e4
 const VERIFY_SELECTOR: [u8; 4] = [0xea, 0x50, 0xd0, 0xe4];

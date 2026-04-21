@@ -9,10 +9,6 @@ name = "honk_verifier"
 path = "src/main.rs"
 crate-type = ["cdylib"]
 
-[[test]]
-name = "verify_test"
-path = "tests/verify_test.rs"
-
 [profile.release]
 codegen-units = 1
 lto = true

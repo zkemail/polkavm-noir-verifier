@@ -101,7 +101,7 @@ function generateVkRs(parsed: ParsedSol): string {
   return `extern crate alloc;
 use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};
-use crate::g1::G1Point;
+use crate::honk::g1::G1Point;
 
 /// G2 point in EVM pairing precompile format: (x_im, x_re, y_im, y_re) each 32 bytes.
 pub type G2Point = [u8; 128];
@@ -281,14 +281,8 @@ function generateContractRs(parsed: ParsedSol): string {
 #![no_std]
 extern crate alloc;
 
-mod fr;
-mod fr_utils;
-mod g1;
-mod proof;
-mod relations;
-mod shplemini;
+mod honk;
 mod sumcheck;
-mod transcript;
 mod vk;
 
 use alloc::vec::Vec;
@@ -296,9 +290,9 @@ use polkavm_derive::polkavm_export;
 use simplealloc::SimpleAlloc;
 use uapi::{HostFn, HostFnImpl as api, ReturnFlags};
 
-use fr::Fr;
-use proof::load_proof;
-use transcript::generate_transcript;
+use honk::fr::Fr;
+use honk::proof::load_proof;
+use honk::transcript::generate_transcript;
 use vk::load_vk;
 
 #[global_allocator]
@@ -450,7 +444,7 @@ fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> bool {
         return false;
     }
 
-    shplemini::verify_shplemini(&proof, &vk, &t)
+    honk::shplemini::verify_shplemini(&proof, &vk, &t)
 }
 
 fn compute_public_input_delta(
@@ -537,10 +531,10 @@ function generateSumcheckRs(parsed: ParsedSol): string {
     return entries.join('\n');
   }
 
-  return `use crate::fr::Fr;
-use crate::proof::{Proof, BATCHED_RELATION_PARTIAL_LENGTH};
-use crate::relations::{accumulate_relation_evaluations, accumulate_relation_evaluations_raw, NUMBER_OF_SUBRELATIONS};
-use crate::transcript::Transcript;
+  return `use crate::honk::fr::Fr;
+use crate::honk::proof::{Proof, BATCHED_RELATION_PARTIAL_LENGTH};
+use crate::honk::relations::{accumulate_relation_evaluations, accumulate_relation_evaluations_raw, NUMBER_OF_SUBRELATIONS};
+use crate::honk::transcript::Transcript;
 
 /// Barycentric Lagrange denominators (from Solidity BARYCENTRIC_LAGRANGE_DENOMINATORS)
 fn barycentric_lagrange_denominators() -> [Fr; BATCHED_RELATION_PARTIAL_LENGTH] {
@@ -743,15 +737,15 @@ function main() {
   console.log('Generating vk.rs...');
   fs.writeFileSync(path.join(srcDir, 'vk.rs'), generateVkRs(parsed));
 
-  console.log('Generating contract.rs...');
-  fs.writeFileSync(path.join(srcDir, 'contract.rs'), generateContractRs(parsed));
+  console.log('Generating main.rs...');
+  fs.writeFileSync(path.join(srcDir, 'main.rs'), generateContractRs(parsed));
 
   console.log('Generating sumcheck.rs...');
   fs.writeFileSync(path.join(srcDir, 'sumcheck.rs'), generateSumcheckRs(parsed));
 
   console.log(`\nDone! Output directory: ${outDir}`);
   console.log(`  Generic files: 7 Rust sources + configs + TS scripts`);
-  console.log(`  Generated files: vk.rs, contract.rs, sumcheck.rs`);
+  console.log(`  Generated files: main.rs, vk.rs, sumcheck.rs`);
 
   if (build) {
     console.log('\nBuilding...');

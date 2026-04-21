@@ -1,14 +1,14 @@
 extern crate alloc;
-use crate::fr::Fr;
-use crate::fr_utils::{fq_from_split, fr_to_scalar};
-use crate::g1::{ec_add, ec_mul, ec_pairing_check, negate, G1Point};
-use crate::proof::{Proof, CONST_PROOF_SIZE_LOG_N, NUMBER_OF_ENTITIES};
-use crate::transcript::Transcript;
+use super::fr::Fr;
+use super::fr_utils::{fq_from_split, fr_to_scalar};
+use super::g1::{ec_add, ec_mul, ec_pairing_check, negate, G1Point};
+use super::proof::{Proof, CONST_PROOF_SIZE_LOG_N, NUMBER_OF_ENTITIES};
+use super::transcript::Transcript;
 use crate::vk::{g2_generator, g2_kzg_srs, VerificationKey};
 
 pub const NUMBER_UNSHIFTED: usize = 35;
 
-fn convert_proof_point(pp: &crate::proof::G1ProofPoint) -> G1Point {
+fn convert_proof_point(pp: &super::proof::G1ProofPoint) -> G1Point {
     let x = fq_from_split(&pp.x_0, &pp.x_1);
     let y = fq_from_split(&pp.y_0, &pp.y_1);
     G1Point { x, y }

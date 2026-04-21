@@ -1,7 +1,7 @@
 extern crate alloc;
 use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};
-use crate::fr::Fr;
+use super::fr::Fr;
 
 pub const CONST_PROOF_SIZE_LOG_N: usize = 28;
 pub const NUMBER_OF_ENTITIES: usize = 40;

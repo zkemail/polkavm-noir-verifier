@@ -8,8 +8,7 @@ mod vk;
 
 use alloc::vec::Vec;
 use polkavm_derive::polkavm_export;
-use simplealloc::SimpleAlloc;
-use uapi::{HostFn, HostFnImpl as api, ReturnFlags};
+use pallet_revive_uapi::{HostFn, HostFnImpl as api, ReturnFlags};
 
 use honk::fr::Fr;
 use honk::proof::load_proof;
@@ -17,7 +16,12 @@ use honk::transcript::generate_transcript;
 use vk::load_vk;
 
 #[global_allocator]
-static ALLOCATOR: SimpleAlloc<{ 96 * 1024 }> = SimpleAlloc::new();
+static mut ALLOC: picoalloc::Mutex<picoalloc::Allocator<picoalloc::ArrayPointer<{ 96 * 1024 }>>> = {
+    static mut ARRAY: picoalloc::Array<{ 96 * 1024 }> = picoalloc::Array([0u8; 96 * 1024]);
+    picoalloc::Mutex::new(picoalloc::Allocator::new(unsafe {
+        picoalloc::ArrayPointer::new(&raw mut ARRAY)
+    }))
+};
 
 /// Function selector for verify(bytes,bytes32[]) = 0xea50d0e4
 const VERIFY_SELECTOR: [u8; 4] = [0xea, 0x50, 0xd0, 0xe4];
@@ -42,7 +46,6 @@ pub extern "C" fn call() {
     let length = api::call_data_size() as usize;
     if length < 4 {
         api::return_value(ReturnFlags::REVERT, b"INPUT_TOO_SHORT");
-        return;
     }
 
     let mut selector = [0u8; 4];
@@ -128,7 +131,6 @@ fn handle_verify(length: usize) {
         Some(x) => x,
         None => {
             api::return_value(ReturnFlags::REVERT, b"ABI_DECODE_FAILED");
-            return;
         }
     };
 
@@ -169,7 +171,6 @@ fn do_verify_diag(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {
             chunk.copy_from_slice(&fr_to_scalar(*ev));
         }
         api::return_value(ReturnFlags::empty(), &out);
-        return 0; // unreachable but keeps type
     }
     code
 }

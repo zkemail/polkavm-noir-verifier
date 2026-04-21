@@ -1,0 +1,25 @@
+[package]
+name = "precompile-test"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "precompile_test"
+path = "src/contract.rs"
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+
+[dependencies]
+polkavm-derive = { version = "0.25.0" }
+simplealloc = { version = "0.0.1", git = "https://github.com/paritytech/polkavm.git", rev = "ff37df6bf75201ef9e5f535762d267d7990c96d2" }
+
+[dependencies.uapi]
+package = "pallet-revive-uapi"
+git = "https://github.com/paritytech/polkadot-sdk.git"
+rev = "b7b7f0c50f6ce8bad7a7a3a10139e53714740b4e"
+default-features = false
+features = ["unstable-hostfn"]

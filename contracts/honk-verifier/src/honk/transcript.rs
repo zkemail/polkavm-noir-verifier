@@ -1,12 +1,13 @@
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};
 
+use tiny_keccak::{Hasher, Keccak};
+
 use super::fr::Fr;
-use super::fr_utils::{fr_to_scalar, keccak256, split_challenge};
+use super::fr_utils::{fr_to_scalar, split_challenge};
 use super::proof::{
-    Proof, CONST_PROOF_SIZE_LOG_N, NUMBER_OF_ENTITIES,
+    Proof, CONST_PROOF_SIZE_LOG_N,
 };
 
 pub const NUMBER_OF_ALPHAS: usize = 25;
@@ -44,19 +45,25 @@ pub struct Transcript {
     pub shplonk_z: Fr,
 }
 
+/// Stream-hash multiple 32-byte values via keccak256 without allocating a buffer.
 fn hash_u256s(values: &[[u8; 32]]) -> Fr {
-    let mut buf = Vec::with_capacity(values.len() * 32);
+    let mut h = Keccak::v256();
     for v in values {
-        buf.extend_from_slice(v);
+        h.update(v);
     }
-    let h = keccak256(&buf);
-    Fr::from_be_bytes(&h)
+    let mut out = [0u8; 32];
+    h.finalize(&mut out);
+    Fr::from_be_bytes(&out)
 }
 
+/// Hash a single Fr challenge.
 fn hash_single(challenge: Fr) -> Fr {
     let bytes = fr_to_scalar(challenge);
-    let h = keccak256(&bytes);
-    Fr::from_be_bytes(&h)
+    let mut h = Keccak::v256();
+    h.update(&bytes);
+    let mut out = [0u8; 32];
+    h.finalize(&mut out);
+    Fr::from_be_bytes(&out)
 }
 
 fn u64_to_be32(v: u64) -> [u8; 32] {
@@ -67,6 +74,8 @@ fn u64_to_be32(v: u64) -> [u8; 32] {
 
 /// Generate the full Fiat-Shamir transcript (matches TranscriptLib.generateTranscript).
 /// Returns a heap-boxed Transcript to avoid ~2.9KB stack allocation in the caller.
+///
+/// All hashing uses streaming keccak to avoid Vec allocations.
 pub fn generate_transcript(
     proof: &Proof,
     public_inputs: &[[u8; 32]],
@@ -75,27 +84,25 @@ pub fn generate_transcript(
     pub_inputs_offset: u64,
 ) -> Box<Transcript> {
     // --- Eta challenge ---
-    let mut round0: Vec<[u8; 32]> = Vec::new();
-    round0.push(u64_to_be32(circuit_size));
-    round0.push(u64_to_be32(public_inputs_size));
-    round0.push(u64_to_be32(pub_inputs_offset));
-    for pi in public_inputs {
-        round0.push(*pi);
-    }
-    round0.push(proof.w1.x_0);
-    round0.push(proof.w1.x_1);
-    round0.push(proof.w1.y_0);
-    round0.push(proof.w1.y_1);
-    round0.push(proof.w2.x_0);
-    round0.push(proof.w2.x_1);
-    round0.push(proof.w2.y_0);
-    round0.push(proof.w2.y_1);
-    round0.push(proof.w3.x_0);
-    round0.push(proof.w3.x_1);
-    round0.push(proof.w3.y_0);
-    round0.push(proof.w3.y_1);
-
-    let prev = hash_u256s(&round0);
+    // Stream directly into keccak: [circuit_size, pub_inputs_size, offset, ...pub_inputs, w1, w2, w3]
+    let prev = {
+        let mut h = Keccak::v256();
+        h.update(&u64_to_be32(circuit_size));
+        h.update(&u64_to_be32(public_inputs_size));
+        h.update(&u64_to_be32(pub_inputs_offset));
+        for pi in public_inputs {
+            h.update(pi);
+        }
+        h.update(&proof.w1.x_0); h.update(&proof.w1.x_1);
+        h.update(&proof.w1.y_0); h.update(&proof.w1.y_1);
+        h.update(&proof.w2.x_0); h.update(&proof.w2.x_1);
+        h.update(&proof.w2.y_0); h.update(&proof.w2.y_1);
+        h.update(&proof.w3.x_0); h.update(&proof.w3.x_1);
+        h.update(&proof.w3.y_0); h.update(&proof.w3.y_1);
+        let mut out = [0u8; 32];
+        h.finalize(&mut out);
+        Fr::from_be_bytes(&out)
+    };
     let (eta, eta_two) = split_challenge(prev);
     let prev2 = hash_single(prev);
     let (eta_three, _) = split_challenge(prev2);
@@ -161,7 +168,6 @@ pub fn generate_transcript(
     }
 
     // --- Gate challenges ---
-    // Use iter_mut() to avoid integer index variable (compiler bug workaround).
     let mut gate_challenges = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
     for gc_dst in gate_challenges.iter_mut() {
         prev = hash_single(prev);
@@ -170,47 +176,66 @@ pub fn generate_transcript(
     }
 
     // --- Sumcheck U challenges ---
+    // Use a stack buffer instead of allocating a Vec per round.
     let mut sumcheck_u_challenges = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
+    let mut uc_buf = [0u8; 9 * 32]; // prev + 8 univariate elements
     for (sc_dst, univariates) in sumcheck_u_challenges.iter_mut().zip(proof.sumcheck_univariates.iter()) {
-        let mut uc: Vec<u8> = Vec::with_capacity(9 * 32);
-        uc.extend_from_slice(&fr_to_scalar(prev));
-        for elem in univariates.iter() {
-            uc.extend_from_slice(&fr_to_scalar(*elem));
+        uc_buf[0..32].copy_from_slice(&fr_to_scalar(prev));
+        for (chunk, elem) in uc_buf[32..].chunks_mut(32).zip(univariates.iter()) {
+            chunk.copy_from_slice(&fr_to_scalar(*elem));
         }
-        let h = keccak256(&uc);
-        prev = Fr::from_be_bytes(&h);
+        let mut h = Keccak::v256();
+        h.update(&uc_buf);
+        let mut out = [0u8; 32];
+        h.finalize(&mut out);
+        prev = Fr::from_be_bytes(&out);
         let (sc, _) = split_challenge(prev);
         *sc_dst = sc;
     }
 
     // --- Rho challenge ---
-    let mut rho_elems: Vec<[u8; 32]> = Vec::with_capacity(NUMBER_OF_ENTITIES + 1);
-    rho_elems.push(fr_to_scalar(prev));
-    for eval in proof.sumcheck_evaluations.iter() {
-        rho_elems.push(fr_to_scalar(*eval));
-    }
-    prev = hash_u256s(&rho_elems);
+    // Stream: [prev, eval0, eval1, ..., eval39]
+    prev = {
+        let mut h = Keccak::v256();
+        h.update(&fr_to_scalar(prev));
+        for eval in proof.sumcheck_evaluations.iter() {
+            h.update(&fr_to_scalar(*eval));
+        }
+        let mut out = [0u8; 32];
+        h.finalize(&mut out);
+        Fr::from_be_bytes(&out)
+    };
     let (rho, _) = split_challenge(prev);
 
     // --- Gemini R challenge ---
-    let mut gr: Vec<[u8; 32]> = Vec::with_capacity((CONST_PROOF_SIZE_LOG_N - 1) * 4 + 1);
-    gr.push(fr_to_scalar(prev));
-    for comm in proof.gemini_fold_comms.iter() {
-        gr.push(comm.x_0);
-        gr.push(comm.x_1);
-        gr.push(comm.y_0);
-        gr.push(comm.y_1);
-    }
-    prev = hash_u256s(&gr);
+    // Stream: [prev, comm0.x0, comm0.x1, comm0.y0, comm0.y1, ...]
+    prev = {
+        let mut h = Keccak::v256();
+        h.update(&fr_to_scalar(prev));
+        for comm in proof.gemini_fold_comms.iter() {
+            h.update(&comm.x_0);
+            h.update(&comm.x_1);
+            h.update(&comm.y_0);
+            h.update(&comm.y_1);
+        }
+        let mut out = [0u8; 32];
+        h.finalize(&mut out);
+        Fr::from_be_bytes(&out)
+    };
     let (gemini_r, _) = split_challenge(prev);
 
     // --- Shplonk Nu challenge ---
-    let mut nu_elems: Vec<[u8; 32]> = Vec::with_capacity(CONST_PROOF_SIZE_LOG_N + 1);
-    nu_elems.push(fr_to_scalar(prev));
-    for eval in proof.gemini_a_evaluations.iter() {
-        nu_elems.push(fr_to_scalar(*eval));
-    }
-    prev = hash_u256s(&nu_elems);
+    // Stream: [prev, a_eval0, a_eval1, ..., a_eval27]
+    prev = {
+        let mut h = Keccak::v256();
+        h.update(&fr_to_scalar(prev));
+        for eval in proof.gemini_a_evaluations.iter() {
+            h.update(&fr_to_scalar(*eval));
+        }
+        let mut out = [0u8; 32];
+        h.finalize(&mut out);
+        Fr::from_be_bytes(&out)
+    };
     let (shplonk_nu, _) = split_challenge(prev);
 
     // --- Shplonk Z challenge ---

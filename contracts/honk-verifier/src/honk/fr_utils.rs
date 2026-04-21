@@ -1,14 +1,5 @@
-/// Utilities: keccak256, split-point Fq decoding, Fr/Fq byte helpers.
-use tiny_keccak::{Hasher, Keccak};
+/// Utilities: split-point Fq decoding, Fr/Fq byte helpers.
 use super::fr::Fr;
-
-pub fn keccak256(input: &[u8]) -> [u8; 32] {
-    let mut h = Keccak::v256();
-    h.update(input);
-    let mut out = [0u8; 32];
-    h.finalize(&mut out);
-    out
-}
 
 /// Decode a split-encoded G1 x (or y) coordinate.
 /// In the proof: x = x_0 | (x_1 << 136), i.e. x_1 occupies bits 255..136

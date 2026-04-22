@@ -1,3 +1,13 @@
+/// UltraHonk proof deserialization.
+///
+/// Translated from Barretenberg's HonkVerifier.sol `loadProof()`.
+/// Source: `bb write_solidity_verifier` output (Aztec/Barretenberg).
+/// Proof layout: 8 G1 commitments (split-encoded) + sumcheck univariates
+/// + sumcheck evaluations + Gemini fold commitments + evaluations
+/// + Shplonk quotient + KZG quotient.
+///
+/// Constants CONST_PROOF_SIZE_LOG_N=28 and NUMBER_OF_ENTITIES=40 are
+/// fixed for all UltraHonk circuits (defined in the Barretenberg prover).
 extern crate alloc;
 use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};

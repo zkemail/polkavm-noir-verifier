@@ -1,3 +1,14 @@
+/// UltraHonk sub-relation evaluations (26 sub-relations).
+///
+/// Direct translation from HonkVerifier.sol `accumulateRelationEvaluations()`.
+/// Source: Aztec/Barretenberg `bb write_solidity_verifier` output.
+///
+/// The 26 sub-relations correspond to:
+///   - Arithmetic (2), Permutation (2), Lookup (2), DeltaRange (4),
+///     Elliptic (2), Auxiliary (6), Poseidon2External (4), Poseidon2Internal (4)
+///
+/// Each sub-relation formula is identical to the Solidity implementation.
+/// The scaling by alpha powers and pow evaluation matches TranscriptLib.
 use super::fr::Fr;
 use super::proof::NUMBER_OF_ENTITIES;
 use super::transcript::{RelationParameters, NUMBER_OF_ALPHAS};

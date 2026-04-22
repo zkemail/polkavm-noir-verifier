@@ -1,3 +1,13 @@
+/// Fiat-Shamir transcript generation for UltraHonk.
+///
+/// Translated from HonkVerifier.sol `TranscriptLib.generateTranscript()`.
+/// Source: Aztec/Barretenberg `bb write_solidity_verifier` output.
+///
+/// Produces deterministic challenges (eta, beta, gamma, alphas, gate challenges,
+/// sumcheck challenges, rho, gemini_r, shplonk_nu, shplonk_z) from the proof
+/// and public inputs via keccak256 hashing.
+///
+/// Uses streaming keccak (tiny-keccak) to avoid heap allocations.
 extern crate alloc;
 use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};

@@ -1,4 +1,7 @@
 /// Utilities: split-point Fq decoding, Fr/Fq byte helpers.
+///
+/// The split-encoding format (x = x_0 | x_1 << 136) matches Barretenberg's
+/// proof serialization. See: HonkVerifier.sol `convertProofPoint()`.
 use super::fr::Fr;
 
 /// Decode a split-encoded G1 x (or y) coordinate.

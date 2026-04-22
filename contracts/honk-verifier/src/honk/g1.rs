@@ -1,6 +1,13 @@
-/// G1 point arithmetic via PolkaVM EVM precompiles.
-/// ecAdd = 0x06, ecMul = 0x07, ecPairing = 0x08
-/// All points are in uncompressed affine form: (x, y) each 32 bytes big-endian (Fq).
+/// BN254 G1 point operations via EVM precompiles on PolkaVM (pallet-revive).
+///
+/// Delegates to the standard EVM precompiles:
+///   ecAdd (0x06) — EIP-196: https://eips.ethereum.org/EIPS/eip-196
+///   ecMul (0x07) — EIP-196
+///   ecPairing (0x08) — EIP-197: https://eips.ethereum.org/EIPS/eip-197
+///
+/// These are native implementations in the Polkadot runtime (not interpreted),
+/// making them much cheaper than pure-Rust EC arithmetic inside PolkaVM.
+/// Point format: uncompressed affine (x, y), each 32 bytes big-endian (Fq).
 use pallet_revive_uapi::{HostFn, HostFnImpl as api, CallFlags};
 
 /// A BN254 G1 affine point (uncompressed, big-endian field elements).

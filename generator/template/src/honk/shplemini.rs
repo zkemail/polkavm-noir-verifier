@@ -1,3 +1,12 @@
+/// Shplemini: KZG batch opening verification for UltraHonk.
+///
+/// Translated from HonkVerifier.sol `batchedShpleminiVerification()`.
+/// Source: Aztec/Barretenberg `bb write_solidity_verifier` output.
+///
+/// Combines Gemini fold evaluations + Shplonk batching + KZG pairing check.
+/// The MSM (multi-scalar multiplication) is done via sequential ecMul/ecAdd
+/// precompile calls rather than a single MSM precompile.
+/// Final pairing check uses ecPairing (EIP-197).
 extern crate alloc;
 use super::fr::Fr;
 use super::fr_utils::{fq_from_split, fr_to_scalar};

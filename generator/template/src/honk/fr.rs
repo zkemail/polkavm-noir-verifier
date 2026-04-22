@@ -1,5 +1,16 @@
 /// BN254 scalar field Fr arithmetic (Montgomery form, 256-bit limbs).
-/// P = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
+///
+/// Field modulus P = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+///                 = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
+///
+/// Implementation follows standard Montgomery multiplication algorithms.
+/// See: Montgomery, P.L. (1985) "Modular multiplication without trial division"
+/// Modular inverse uses binary extended GCD (constant-time-ish, avoids pow).
+///
+/// This is custom no_std code — no audited BN254 Fr library exists for PolkaVM.
+/// Correctness is verified by on-chain tests: the full UltraHonk verifier
+/// (which depends on every Fr operation) produces identical results to
+/// Barretenberg's `bb verify` for valid and invalid proofs.
 use core::ops::{Add, Mul, Neg, Sub};
 
 /// P in 64-bit limbs (little-endian limb order)

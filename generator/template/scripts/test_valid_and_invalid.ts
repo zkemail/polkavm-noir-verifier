@@ -1,7 +1,13 @@
 import { ethers } from 'ethers';
 import * as fs from 'fs';
+import * as path from 'path';
+
 import * as dotenv from 'dotenv';
-dotenv.config();
+
+
+const __dirname = path.dirname(process.argv[1]);
+const ROOT = path.join(__dirname, '..');
+dotenv.config({ path: [path.join(ROOT, '.env'), path.join(ROOT, '../../.env')] });
 
 const RPC_URL = 'https://eth-rpc-testnet.polkadot.io/';
 const VERIFY_SELECTOR = '0xea50d0e4';
@@ -14,10 +20,10 @@ async function callVerify(provider: ethers.JsonRpcProvider, address: string, pro
 }
 
 async function main() {
-  const { address } = JSON.parse(fs.readFileSync('deployment.json', 'utf8'));
-  const proofBytes = fs.readFileSync('proof');
+  const { address } = JSON.parse(fs.readFileSync(path.join(ROOT, 'deployment.json'), 'utf8'));
+  const proofBytes = fs.readFileSync(path.join(ROOT, 'proof'));
   const proofHex = '0x' + proofBytes.toString('hex');
-  const pubInputBytes = fs.readFileSync('public_inputs');
+  const pubInputBytes = fs.readFileSync(path.join(ROOT, 'public_inputs'));
   const publicInputs: string[] = [];
   for (let i = 0; i < pubInputBytes.length; i += 32) {
     publicInputs.push('0x' + pubInputBytes.slice(i, i + 32).toString('hex'));

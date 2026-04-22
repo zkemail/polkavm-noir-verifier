@@ -1,8 +1,13 @@
 import { ethers } from 'ethers';
 import * as fs from 'fs';
+import * as path from 'path';
+
 import * as dotenv from 'dotenv';
 
-dotenv.config();
+
+const __dirname = path.dirname(process.argv[1]);
+const ROOT = path.join(__dirname, '..');
+dotenv.config({ path: [path.join(ROOT, '.env'), path.join(ROOT, '../../.env')] });
 
 const RPC_URL = 'https://eth-rpc-testnet.polkadot.io/';
 const PRIVATE_KEY = process.env.PRIVATE_KEY || '';
@@ -20,7 +25,7 @@ async function main() {
   const balance = await provider.getBalance(wallet.address);
   console.log('Balance:', ethers.formatEther(balance), 'PAS\n');
 
-  const bytecode = fs.readFileSync('honk_verifier.polkavm');
+  const bytecode = fs.readFileSync(path.join(ROOT, 'honk_verifier.polkavm'));
   console.log(`Contract size: ${bytecode.length} bytes`);
 
   const tx = await wallet.sendTransaction({
@@ -34,7 +39,7 @@ async function main() {
   console.log(`Contract deployed: ${contractAddress}`);
 
   fs.writeFileSync(
-    'deployment.json',
+    path.join(ROOT, 'deployment.json'),
     JSON.stringify({ address: contractAddress, timestamp: new Date().toISOString() }, null, 2)
   );
   console.log('Saved to deployment.json');

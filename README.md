@@ -14,13 +14,13 @@ The generator reads a `HonkVerifier.sol` (produced by Barretenberg's `bb write_s
 - Circuit-specific verification key, sumcheck rounds, and entry point
 - Generic UltraHonk verification modules (transcript, relations, shplemini/KZG)
 - EC operations via EVM precompiles (ecAdd, ecMul, ecPairing)
-- Deploy and test scripts
+- Deploy script
 
 ## Usage
 
 ### Bring your own HonkVerifier.sol
 
-If you already have a `HonkVerifier.sol` from your circuit (plus `proof` and `public_inputs` for testing):
+If you already have a `HonkVerifier.sol` from your circuit:
 
 ```bash
 # Install generator dependencies
@@ -32,15 +32,12 @@ cd generator && npx ts-node generate-verifier.ts honk \
   --out ../contracts/my-verifier \
   --build
 
-# Deploy and test
+# Deploy
 cd ../contracts/my-verifier
 cp .env.example .env   # add your PRIVATE_KEY
 npm install
 npx ts-node scripts/deploy.ts
-npx ts-node scripts/quick_test.ts
 ```
-
-The generator will also copy `proof` and `public_inputs` from the same directory as your `HonkVerifier.sol` if they exist.
 
 ### Try with the included example circuit
 
@@ -58,12 +55,11 @@ bb write_solidity_verifier --vk_path ./target/vk --output_path ./target/HonkVeri
 cd ../..
 ./scripts/generate.sh
 
-# 3. Deploy and run full test suite
+# 3. Deploy
 cd contracts/honk-verifier
 cp .env.example .env   # add your PRIVATE_KEY
 npm install
 npx ts-node scripts/deploy.ts
-npx ts-node scripts/test_valid_and_invalid.ts
 ```
 
 ## Project structure
@@ -78,7 +74,7 @@ npx ts-node scripts/test_valid_and_invalid.ts
 │       ├── templates/              # Rust files with {{placeholders}}
 │       └── static/                 # Files copied verbatim
 │           ├── src/honk/           # Generic verification modules
-│           ├── scripts/            # Deploy and test scripts
+│           ├── scripts/            # Deploy script
 │           └── interfaces/         # IHonkVerifier.sol
 ├── fixtures/
 │   └── noir-circuit/               # Example test circuit
@@ -89,8 +85,8 @@ npx ts-node scripts/test_valid_and_invalid.ts
 
 ## Tested with
 
-- **Simple circuit**: LOG_N=5, 1 public input — 5/5 tests pass
-- **ZK email circuit** ([zkemail/ens-contracts](https://github.com/zkemail/ens-contracts)): LOG_N=19, 155 public inputs — 3/3 tests pass
+- **Simple circuit**: LOG_N=5, 1 public input — verified on Paseo
+- **ZK email circuit** ([zkemail/ens-contracts](https://github.com/zkemail/ens-contracts)): LOG_N=19, 155 public inputs — verified on Paseo
 
 ## Requirements
 

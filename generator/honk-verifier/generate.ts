@@ -7,7 +7,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { copyDir, fillTemplate, copyArtifacts } from '../utils';
+import { copyDir, fillTemplate } from '../utils';
 import { parseSolidity, VK_FIELD_ORDER, RUST_TO_SOL, ParsedHonkVerifier } from './parse_solidity';
 
 // --- Heap size calculation ---
@@ -114,9 +114,6 @@ export function generate(solPath: string, outDir: string, build: boolean): void 
   fs.writeFileSync(path.join(srcDir, 'sumcheck.rs'), fillTemplate(sumcheckTmpl, {
     SUMCHECK_ROUNDS: buildSumcheckRounds(parsed.LOG_N),
   }));
-
-  // Copy proof artifacts if present
-  copyArtifacts(path.dirname(solPath), outDir);
 
   console.log(`\nDone! Output directory: ${outDir}`);
 

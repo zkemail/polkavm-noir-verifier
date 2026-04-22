@@ -22,14 +22,3 @@ export function fillTemplate(template: string, values: Record<string, string>): 
     throw new Error(`Unknown template placeholder: ${match}`);
   });
 }
-
-/** Copy proof + public_inputs from solDir to outDir if they exist. */
-export function copyArtifacts(solDir: string, outDir: string): void {
-  for (const artifact of ['proof', 'public_inputs']) {
-    const src = path.join(solDir, artifact);
-    if (fs.existsSync(src)) {
-      fs.copyFileSync(src, path.join(outDir, artifact));
-      console.log(`Copied ${artifact} from ${solDir}`);
-    }
-  }
-}

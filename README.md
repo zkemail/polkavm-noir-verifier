@@ -37,6 +37,10 @@ cd ../contracts/my-verifier
 cp .env.example .env   # add your PRIVATE_KEY
 npm install
 npx ts-node scripts/deploy.ts
+
+# Test (requires cast from foundry + proof/public_inputs next to HonkVerifier.sol)
+cd ../..
+./scripts/test.sh /path/to/your/proof /path/to/your/public_inputs
 ```
 
 ### Try with the included example circuit
@@ -55,11 +59,13 @@ bb write_solidity_verifier --vk_path ./target/vk --output_path ./target/HonkVeri
 cd ../..
 ./scripts/generate.sh
 
-# 3. Deploy
+# 3. Deploy and test
 cd contracts/honk-verifier
 cp .env.example .env   # add your PRIVATE_KEY
 npm install
 npx ts-node scripts/deploy.ts
+cd ../..
+./scripts/test.sh
 ```
 
 ## Project structure
@@ -79,7 +85,8 @@ npx ts-node scripts/deploy.ts
 ├── fixtures/
 │   └── noir-circuit/               # Example test circuit
 ├── scripts/
-│   └── generate.sh                 # Convenience wrapper for example circuit
+│   ├── generate.sh                 # Generate + build verifier
+│   └── test.sh                     # Run verification tests (requires cast)
 └── contracts/                      # Generated output (gitignored)
 ```
 
@@ -93,6 +100,7 @@ npx ts-node scripts/deploy.ts
 - [Rust](https://rustup.rs/) (nightly 2025+)
 - [polkatool](https://github.com/nicpottier/polkatool) for PolkaVM linking
 - Node.js 18+ (for generator and deploy scripts)
+- [Foundry](https://getfoundry.sh/) (`cast`) for running tests
 - PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1111))
 
 Only needed if compiling circuits from source:

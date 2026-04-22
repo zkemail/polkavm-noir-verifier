@@ -316,7 +316,6 @@ pub extern "C" fn call() {
     let length = api::call_data_size() as usize;
     if length < 4 {
         api::return_value(ReturnFlags::REVERT, b"INPUT_TOO_SHORT");
-        return;
     }
 
     let mut selector = [0u8; 4];
@@ -400,7 +399,6 @@ fn handle_verify(length: usize) {
         Some(x) => x,
         None => {
             api::return_value(ReturnFlags::REVERT, b"ABI_DECODE_FAILED");
-            return;
         }
     };
 
@@ -448,7 +446,7 @@ fn compute_public_input_delta(
     gamma: Fr,
     offset: u64,
     n: u64,
-    num_public_inputs: u64,
+    _num_public_inputs: u64,
 ) -> Fr {
     let mut numerator = Fr::one();
     let mut denominator = Fr::one();
@@ -660,6 +658,16 @@ function main() {
 
   console.log('Generating sumcheck.rs...');
   fs.writeFileSync(path.join(srcDir, 'sumcheck.rs'), generateSumcheckRs(parsed));
+
+  // Copy proof + public_inputs if they exist alongside HonkVerifier.sol
+  const solDir = path.dirname(solPath);
+  for (const artifact of ['proof', 'public_inputs']) {
+    const src = path.join(solDir, artifact);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(outDir, artifact));
+      console.log(`Copied ${artifact} from ${solDir}`);
+    }
+  }
 
   console.log(`\nDone! Output directory: ${outDir}`);
   console.log(`  Generic files: 7 Rust sources + configs + TS scripts`);

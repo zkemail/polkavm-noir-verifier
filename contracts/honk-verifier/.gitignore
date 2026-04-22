@@ -1,5 +1,0 @@
-target/
-.env
-node_modules/
-*.polkavm
-deployment.json

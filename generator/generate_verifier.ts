@@ -642,7 +642,7 @@ function main() {
   console.log(`  Found ${parsed.points.size} G1 points`);
 
   // Copy template
-  const templateDir = path.join(__dirname, 'template');
+  const templateDir = path.join(__dirname, 'template', 'honk-verifier');
   console.log(`Copying template to ${outDir}...`);
   copyDir(templateDir, outDir);
 

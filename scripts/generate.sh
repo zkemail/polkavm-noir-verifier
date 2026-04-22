@@ -11,7 +11,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-SOL_PATH="${1:-$REPO_ROOT/fixtures/circuit/target/HonkVerifier.sol}"
+SOL_PATH="${1:-$REPO_ROOT/fixtures/noir-circuit/target/HonkVerifier.sol}"
 OUT_DIR="${2:-$REPO_ROOT/contracts/honk-verifier}"
 
 if [ ! -f "$SOL_PATH" ]; then

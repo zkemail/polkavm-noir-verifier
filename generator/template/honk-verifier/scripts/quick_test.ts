@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 
 const __dirname = path.dirname(process.argv[1]);
 const ROOT = path.join(__dirname, '..');
-dotenv.config({ path: [path.join(ROOT, '.env'), path.join(ROOT, '../../.env')] });
+dotenv.config({ path: path.join(ROOT, '.env') });
 
 const RPC_URL = 'https://eth-rpc-testnet.polkadot.io/';
 const VERIFY_SELECTOR = '0xea50d0e4';

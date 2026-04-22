@@ -7,36 +7,62 @@ Given any Noir circuit, this tool produces a complete Rust verifier contract tha
 ## How it works
 
 ```
-Noir circuit → bb (Barretenberg) → HonkVerifier.sol → Generator → PolkaVM contract
+HonkVerifier.sol → Generator → PolkaVM contract (.polkavm)
 ```
 
-The generator reads the Solidity verifier output from Barretenberg's `bb write_solidity_verifier` and produces a buildable Rust PolkaVM project with:
+The generator reads a `HonkVerifier.sol` (produced by Barretenberg's `bb write_solidity_verifier`) and outputs a buildable Rust PolkaVM project with:
 - Circuit-specific verification key, sumcheck rounds, and entry point
 - Generic UltraHonk verification modules (transcript, relations, shplemini/KZG)
 - EC operations via EVM precompiles (ecAdd, ecMul, ecPairing)
 - Deploy and test scripts
 
-## Quick start
+## Usage
+
+### Bring your own HonkVerifier.sol
+
+If you already have a `HonkVerifier.sol` from your circuit (plus `proof` and `public_inputs` for testing):
 
 ```bash
-# 1. Compile your Noir circuit and generate artifacts
+# Install generator dependencies
+cd generator && npm install && cd ..
+
+# Generate the verifier contract
+cd generator && npx ts-node generate-verifier.ts honk \
+  --sol /path/to/your/HonkVerifier.sol \
+  --out ../contracts/my-verifier \
+  --build
+
+# Deploy and test
+cd ../contracts/my-verifier
+cp .env.example .env   # add your PRIVATE_KEY
+npm install
+npx ts-node scripts/deploy.ts
+npx ts-node scripts/quick_test.ts
+```
+
+The generator will also copy `proof` and `public_inputs` from the same directory as your `HonkVerifier.sol` if they exist.
+
+### Try with the included example circuit
+
+A simple test circuit (`assert(x != y)`) is included for development and testing:
+
+```bash
+# 1. Compile the circuit and generate proof artifacts
 cd fixtures/noir-circuit
 nargo execute
 bb prove --bytecode_path ./target/circuit.json --witness_path ./target/circuit.gz --output_path ./target --oracle_hash keccak
 bb write_vk --bytecode_path ./target/circuit.json --output_path ./target --oracle_hash keccak
 bb write_solidity_verifier --vk_path ./target/vk --output_path ./target/HonkVerifier.sol
 
-# 2. Generate the PolkaVM verifier
+# 2. Generate, build, and link the verifier
 cd ../..
 ./scripts/generate.sh
-# Or: cd generator && npx ts-node generate-verifier.ts honk --sol ../fixtures/noir-circuit/target/HonkVerifier.sol --out ../contracts/honk-verifier --build
 
-# 3. Deploy and test
+# 3. Deploy and run full test suite
 cd contracts/honk-verifier
-cp .env.example .env  # add your PRIVATE_KEY
+cp .env.example .env   # add your PRIVATE_KEY
 npm install
 npx ts-node scripts/deploy.ts
-npx ts-node scripts/quick_test.ts
 npx ts-node scripts/test_valid_and_invalid.ts
 ```
 
@@ -55,9 +81,9 @@ npx ts-node scripts/test_valid_and_invalid.ts
 │           ├── scripts/            # Deploy and test scripts
 │           └── interfaces/         # IHonkVerifier.sol
 ├── fixtures/
-│   └── noir-circuit/               # Test circuit (assert x != y)
+│   └── noir-circuit/               # Example test circuit
 ├── scripts/
-│   └── generate.sh                 # Convenience wrapper
+│   └── generate.sh                 # Convenience wrapper for example circuit
 └── contracts/                      # Generated output (gitignored)
 ```
 
@@ -69,11 +95,13 @@ npx ts-node scripts/test_valid_and_invalid.ts
 ## Requirements
 
 - [Rust](https://rustup.rs/) (nightly 2025+)
-- [nargo](https://noir-lang.org/) 1.0.0-beta.5+
-- [bb](https://github.com/AztecProtocol/barretenberg) (Barretenberg) 0.84.0+
 - [polkatool](https://github.com/nicpottier/polkatool) for PolkaVM linking
 - Node.js 18+ (for generator and deploy scripts)
 - PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1111))
+
+Only needed if compiling circuits from source:
+- [nargo](https://noir-lang.org/) 1.0.0-beta.5+
+- [bb](https://github.com/AztecProtocol/barretenberg) (Barretenberg) 0.84.0+
 
 ## Architecture
 

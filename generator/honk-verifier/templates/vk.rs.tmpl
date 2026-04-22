@@ -1,0 +1,110 @@
+extern crate alloc;
+use alloc::boxed::Box;
+use alloc::alloc::{alloc_zeroed, Layout};
+use crate::honk::g1::G1Point;
+
+/// G2 point in EVM pairing precompile format: (x_im, x_re, y_im, y_re) each 32 bytes.
+pub type G2Point = [u8; 128];
+
+pub struct VerificationKey {
+    pub circuit_size: u64,
+    pub log_circuit_size: u64,
+    pub public_inputs_size: u64,
+    pub pub_inputs_offset: u64,
+    pub qm: G1Point,
+    pub qc: G1Point,
+    pub ql: G1Point,
+    pub qr: G1Point,
+    pub qo: G1Point,
+    pub q4: G1Point,
+    pub q_lookup: G1Point,
+    pub q_arith: G1Point,
+    pub q_delta_range: G1Point,
+    pub q_elliptic: G1Point,
+    pub q_aux: G1Point,
+    pub q_poseidon2_external: G1Point,
+    pub q_poseidon2_internal: G1Point,
+    pub s1: G1Point,
+    pub s2: G1Point,
+    pub s3: G1Point,
+    pub s4: G1Point,
+    pub id1: G1Point,
+    pub id2: G1Point,
+    pub id3: G1Point,
+    pub id4: G1Point,
+    pub t1: G1Point,
+    pub t2: G1Point,
+    pub t3: G1Point,
+    pub t4: G1Point,
+    pub lagrange_first: G1Point,
+    pub lagrange_last: G1Point,
+}
+
+fn hex32(s: &str) -> [u8; 32] {
+    let b = s.as_bytes();
+    let len = b.len();
+    let mut out = [0u8; 32];
+    if len == 64 {
+        for i in 0..32 {
+            out[i] = (nibble(b[i * 2]) << 4) | nibble(b[i * 2 + 1]);
+        }
+    } else {
+        let pad = 64 - len;
+        let pad_bytes = pad / 2;
+        for i in 0..32 {
+            let nibble_idx = i * 2;
+            let hi = if nibble_idx < pad { 0 } else { nibble(b[nibble_idx - pad]) };
+            let lo_idx = nibble_idx + 1;
+            let lo = if lo_idx < pad { 0 } else { nibble(b[lo_idx - pad]) };
+            out[i] = (hi << 4) | lo;
+            let _ = pad_bytes;
+        }
+    }
+    out
+}
+
+fn nibble(b: u8) -> u8 {
+    match b {
+        b'0'..=b'9' => b - b'0',
+        b'a'..=b'f' => b - b'a' + 10,
+        b'A'..=b'F' => b - b'A' + 10,
+        _ => 0,
+    }
+}
+
+fn g1(x: &str, y: &str) -> G1Point {
+    G1Point { x: hex32(x), y: hex32(y) }
+}
+
+pub fn load_vk() -> Box<VerificationKey> {
+    let layout = Layout::new::<VerificationKey>();
+    let ptr = unsafe { alloc_zeroed(layout) as *mut VerificationKey };
+    assert!(!ptr.is_null());
+    let vk = unsafe { &mut *ptr };
+    vk.circuit_size = {{CIRCUIT_SIZE}};
+    vk.log_circuit_size = {{LOG_CIRCUIT_SIZE}};
+    vk.public_inputs_size = {{PUBLIC_INPUTS_SIZE}};
+    vk.pub_inputs_offset = 1;
+{{VK_POINTS}}
+    unsafe { Box::from_raw(ptr) }
+}
+
+/// G2 generator for KZG pairing check (EVM format: x_im, x_re, y_im, y_re).
+pub fn g2_generator() -> G2Point {
+    let mut g2 = [0u8; 128];
+    g2[0..32].copy_from_slice(&hex32("198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2"));
+    g2[32..64].copy_from_slice(&hex32("1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed"));
+    g2[64..96].copy_from_slice(&hex32("090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b"));
+    g2[96..128].copy_from_slice(&hex32("12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa"));
+    g2
+}
+
+/// KZG SRS G2 point (EVM format).
+pub fn g2_kzg_srs() -> G2Point {
+    let mut g2 = [0u8; 128];
+    g2[0..32].copy_from_slice(&hex32("260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1"));
+    g2[32..64].copy_from_slice(&hex32("0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0"));
+    g2[64..96].copy_from_slice(&hex32("04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4"));
+    g2[96..128].copy_from_slice(&hex32("22febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55"));
+    g2
+}

@@ -21,4 +21,4 @@ if [ ! -f "$SOL_PATH" ]; then
 fi
 
 cd "$REPO_ROOT/generator"
-npx ts-node generate_verifier.ts --sol "$SOL_PATH" --out "$OUT_DIR" --build
+npx ts-node generate-verifier.ts honk --sol "$SOL_PATH" --out "$OUT_DIR" --build

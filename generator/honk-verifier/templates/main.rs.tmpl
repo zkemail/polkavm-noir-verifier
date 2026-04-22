@@ -1,0 +1,182 @@
+#![no_main]
+#![no_std]
+extern crate alloc;
+
+mod honk;
+mod sumcheck;
+mod vk;
+
+use alloc::vec::Vec;
+use polkavm_derive::polkavm_export;
+use pallet_revive_uapi::{HostFn, HostFnImpl as api, ReturnFlags};
+
+use honk::fr::Fr;
+use honk::proof::load_proof;
+use honk::transcript::generate_transcript;
+use vk::load_vk;
+
+#[global_allocator]
+static mut ALLOC: picoalloc::Mutex<picoalloc::Allocator<picoalloc::ArrayPointer<{ {{HEAP_KB}} * 1024 }>>> = {
+    static mut ARRAY: picoalloc::Array<{ {{HEAP_KB}} * 1024 }> = picoalloc::Array([0u8; {{HEAP_KB}} * 1024]);
+    picoalloc::Mutex::new(picoalloc::Allocator::new(unsafe {
+        picoalloc::ArrayPointer::new(&raw mut ARRAY)
+    }))
+}; // {{HEAP_KB}}KB heap for {{NUM_PUB}} public inputs
+
+/// Function selector for verify(bytes,bytes32[]) = 0xea50d0e4
+const VERIFY_SELECTOR: [u8; 4] = [0xea, 0x50, 0xd0, 0xe4];
+
+const LOG_N: usize = {{LOG_N}};
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    unsafe {
+        core::arch::asm!("unimp");
+        core::hint::unreachable_unchecked();
+    }
+}
+
+#[no_mangle]
+#[polkavm_export]
+pub extern "C" fn deploy() {}
+
+#[no_mangle]
+#[polkavm_export]
+pub extern "C" fn call() {
+    let length = api::call_data_size() as usize;
+    if length < 4 {
+        api::return_value(ReturnFlags::REVERT, b"INPUT_TOO_SHORT");
+    }
+
+    let mut selector = [0u8; 4];
+    api::call_data_copy(&mut selector, 0);
+
+    match selector {
+        VERIFY_SELECTOR => handle_verify(length),
+        _ => api::return_value(ReturnFlags::REVERT, b"UNKNOWN_FUNCTION"),
+    }
+}
+
+/// Read a uint256 from 32 bytes big-endian as a usize.
+fn read_u256_as_usize(bytes: &[u8]) -> Option<usize> {
+    for b in bytes[0..24].iter() {
+        if *b != 0 {
+            return None;
+        }
+    }
+    let mut val = [0u8; 8];
+    val.copy_from_slice(&bytes[24..32]);
+    Some(u64::from_be_bytes(val) as usize)
+}
+
+/// Manual ABI decode of verify(bytes proof, bytes32[] publicInputs).
+fn parse_verify_args(data: &[u8]) -> Option<(Vec<u8>, Vec<[u8; 32]>)> {
+    if data.len() < 64 {
+        return None;
+    }
+    let bytes_offset = read_u256_as_usize(&data[0..32])?;
+    let arr_offset = read_u256_as_usize(&data[32..64])?;
+
+    if data.len() < bytes_offset.checked_add(32)? {
+        return None;
+    }
+    let bytes_len = read_u256_as_usize(&data[bytes_offset..bytes_offset + 32])?;
+    let proof_start = bytes_offset.checked_add(32)?;
+    let proof_end = proof_start.checked_add(bytes_len)?;
+    if data.len() < proof_end {
+        return None;
+    }
+    let proof_bytes = data[proof_start..proof_end].to_vec();
+
+    if data.len() < arr_offset.checked_add(32)? {
+        return None;
+    }
+    let arr_len = read_u256_as_usize(&data[arr_offset..arr_offset + 32])?;
+    let arr_data_start = arr_offset.checked_add(32)?;
+    let arr_data_end = arr_data_start.checked_add(arr_len.checked_mul(32)?)?;
+    if data.len() < arr_data_end {
+        return None;
+    }
+    if arr_len != {{NUM_PUB}} {
+        return None;
+    }
+{{PUB_INPUT_PARSING}}
+
+    Some((proof_bytes, public_inputs))
+}
+
+fn handle_verify(length: usize) {
+    let data_len = length.saturating_sub(4);
+    let mut data = alloc::vec![0u8; data_len];
+    if data_len > 0 {
+        api::call_data_copy(&mut data, 4);
+    }
+
+    let (proof_bytes, public_inputs) = match parse_verify_args(&data) {
+        Some(x) => x,
+        None => {
+            api::return_value(ReturnFlags::REVERT, b"ABI_DECODE_FAILED");
+        }
+    };
+
+    let ok = do_verify(&proof_bytes, &public_inputs);
+    if ok {
+        api::return_value(ReturnFlags::empty(), &[1u8]);
+    } else {
+        api::return_value(ReturnFlags::empty(), &[0u8]);
+    }
+}
+
+fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> bool {
+    let vk = load_vk();
+    let proof = load_proof(proof_bytes);
+
+    let t = generate_transcript(
+        &proof,
+        public_inputs,
+        vk.circuit_size,
+        vk.public_inputs_size,
+        vk.pub_inputs_offset,
+    );
+
+    let mut t = t;
+    t.relation_parameters.public_inputs_delta = compute_public_input_delta(
+        public_inputs,
+        t.relation_parameters.beta,
+        t.relation_parameters.gamma,
+        vk.pub_inputs_offset,
+        vk.circuit_size,
+        vk.public_inputs_size,
+    );
+
+    if !sumcheck::verify_sumcheck(&proof, &t, LOG_N) {
+        return false;
+    }
+
+    honk::shplemini::verify_shplemini(&proof, &vk, &t)
+}
+
+fn compute_public_input_delta(
+    public_inputs: &[[u8; 32]],
+    beta: Fr,
+    gamma: Fr,
+    offset: u64,
+    n: u64,
+    _num_public_inputs: u64,
+) -> Fr {
+    let mut numerator = Fr::one();
+    let mut denominator = Fr::one();
+
+    let mut numerator_acc = gamma + beta * Fr::from_u64(n + offset);
+    let mut denominator_acc = gamma - beta * Fr::from_u64(offset + 1);
+
+    for pi in public_inputs.iter() {
+        let pub_input = Fr::from_be_bytes(pi);
+        numerator = numerator * (numerator_acc + pub_input);
+        denominator = denominator * (denominator_acc + pub_input);
+        numerator_acc = numerator_acc + beta;
+        denominator_acc = denominator_acc - beta;
+    }
+
+    numerator * denominator.inverse().unwrap()
+}

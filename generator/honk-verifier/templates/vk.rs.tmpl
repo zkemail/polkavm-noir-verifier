@@ -1,6 +1,7 @@
 extern crate alloc;
-use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};
+use alloc::boxed::Box;
+
 use crate::honk::g1::G1Point;
 
 /// G2 point in EVM pairing precompile format: (x_im, x_re, y_im, y_re) each 32 bytes.
@@ -52,9 +53,17 @@ fn hex32(s: &str) -> [u8; 32] {
         let pad = 64 - len;
         for (i, slot) in out.iter_mut().enumerate() {
             let nibble_idx = i * 2;
-            let hi = if nibble_idx < pad { 0 } else { nibble(b[nibble_idx - pad]) };
+            let hi = if nibble_idx < pad {
+                0
+            } else {
+                nibble(b[nibble_idx - pad])
+            };
             let lo_idx = nibble_idx + 1;
-            let lo = if lo_idx < pad { 0 } else { nibble(b[lo_idx - pad]) };
+            let lo = if lo_idx < pad {
+                0
+            } else {
+                nibble(b[lo_idx - pad])
+            };
             *slot = (hi << 4) | lo;
         }
     }
@@ -71,7 +80,10 @@ fn nibble(b: u8) -> u8 {
 }
 
 fn g1(x: &str, y: &str) -> G1Point {
-    G1Point { x: hex32(x), y: hex32(y) }
+    G1Point {
+        x: hex32(x),
+        y: hex32(y),
+    }
 }
 
 pub fn load_vk() -> Box<VerificationKey> {
@@ -90,19 +102,35 @@ pub fn load_vk() -> Box<VerificationKey> {
 /// G2 generator for KZG pairing check (EVM format: x_im, x_re, y_im, y_re).
 pub fn g2_generator() -> G2Point {
     let mut g2 = [0u8; 128];
-    g2[0..32].copy_from_slice(&hex32("198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2"));
-    g2[32..64].copy_from_slice(&hex32("1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed"));
-    g2[64..96].copy_from_slice(&hex32("090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b"));
-    g2[96..128].copy_from_slice(&hex32("12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa"));
+    g2[0..32].copy_from_slice(&hex32(
+        "198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2",
+    ));
+    g2[32..64].copy_from_slice(&hex32(
+        "1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed",
+    ));
+    g2[64..96].copy_from_slice(&hex32(
+        "090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b",
+    ));
+    g2[96..128].copy_from_slice(&hex32(
+        "12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa",
+    ));
     g2
 }
 
 /// KZG SRS G2 point (EVM format).
 pub fn g2_kzg_srs() -> G2Point {
     let mut g2 = [0u8; 128];
-    g2[0..32].copy_from_slice(&hex32("260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1"));
-    g2[32..64].copy_from_slice(&hex32("0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0"));
-    g2[64..96].copy_from_slice(&hex32("04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4"));
-    g2[96..128].copy_from_slice(&hex32("22febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55"));
+    g2[0..32].copy_from_slice(&hex32(
+        "260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1",
+    ));
+    g2[32..64].copy_from_slice(&hex32(
+        "0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0",
+    ));
+    g2[64..96].copy_from_slice(&hex32(
+        "04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4",
+    ));
+    g2[96..128].copy_from_slice(&hex32(
+        "22febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55",
+    ));
     g2
 }

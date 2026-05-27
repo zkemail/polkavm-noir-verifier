@@ -5,13 +5,16 @@
 ///
 /// Implementation follows standard Montgomery multiplication algorithms.
 /// See: Montgomery, P.L. (1985) "Modular multiplication without trial division"
-/// Modular inverse uses binary extended GCD (constant-time-ish, avoids pow).
+/// Modular inverse uses the EVM `modexp` precompile (0x05) via Fermat's
+/// little theorem: a^{-1} = a^(p-2) mod p.  The pure-Rust binary extended
+/// GCD is kept below as `mod_inverse_normal_extgcd` for reference / fallback.
 ///
 /// This is custom no_std code — no audited BN254 Fr library exists for PolkaVM.
 /// Correctness is verified by on-chain tests: the full UltraHonk verifier
 /// (which depends on every Fr operation) produces identical results to
 /// Barretenberg's `bb verify` for valid and invalid proofs.
 use core::ops::{Add, Mul, Neg, Sub};
+use pallet_revive_uapi::{CallFlags, HostFn, HostFnImpl as api};
 
 /// P in 64-bit limbs (little-endian limb order)
 pub const P: [u64; 4] = [
@@ -96,11 +99,11 @@ impl Fr {
         if self.is_zero() {
             return None;
         }
-        // Binary extended GCD (avoids pow() which is broken for large exponents on this target).
-        // Convert from Montgomery form, invert in normal form, convert back.
+        // Convert from Montgomery form, invert via modexp precompile (a^(p-2) mod p),
+        // then convert back to Montgomery form.
         let normal = mont_mul(&self.0, &[1, 0, 0, 0]);
-        let inv = mod_inverse_normal(&normal)?;
-        // Convert back to Montgomery: inv * R = mont_mul(inv, R^2/R) = mont_mul(inv, R2)
+        let inv = mod_inverse_normal_modexp(&normal)?;
+        // Convert back to Montgomery: inv * R = mont_mul(inv, R^2 / R) = mont_mul(inv, R2)
         Some(Fr(mont_mul(&inv, &R2)))
     }
 
@@ -141,7 +144,7 @@ impl Mul for Fr {
 /// Multiply-accumulate: acc + a*b + carry_in → (lo, hi).
 /// #[inline(never)] forces LLVM to handle each u128 operation in isolation,
 /// preventing register allocation bugs on RV64E (only 16 GP registers).
-#[inline(never)]
+
 fn mac(acc: u64, a: u64, b: u64, carry: u64) -> (u64, u64) {
     let r = acc as u128 + (a as u128) * (b as u128) + carry as u128;
     (r as u64, (r >> 64) as u64)
@@ -361,9 +364,107 @@ fn is_one256(a: &[u64; 4]) -> bool {
     a[0] == 1 && a[1] == 0 && a[2] == 0 && a[3] == 0
 }
 
+// ─── modexp-precompile-backed inverse ───────────────────────────────────────
+//
+// Big-endian 32-byte encoding of P (BN254 Fr modulus).
+const P_BE: [u8; 32] = [
+    0x30, 0x64, 0x4e, 0x72, 0xe1, 0x31, 0xa0, 0x29,
+    0xb8, 0x50, 0x45, 0xb6, 0x81, 0x81, 0x58, 0x5d,
+    0x28, 0x33, 0xe8, 0x48, 0x79, 0xb9, 0x70, 0x91,
+    0x43, 0xe1, 0xf5, 0x93, 0xf0, 0x00, 0x00, 0x01,
+];
+
+// Big-endian 32-byte encoding of P - 2 (the Fermat exponent).
+const P_MINUS_2_BE: [u8; 32] = [
+    0x30, 0x64, 0x4e, 0x72, 0xe1, 0x31, 0xa0, 0x29,
+    0xb8, 0x50, 0x45, 0xb6, 0x81, 0x81, 0x58, 0x5d,
+    0x28, 0x33, 0xe8, 0x48, 0x79, 0xb9, 0x70, 0x91,
+    0x43, 0xe1, 0xf5, 0x93, 0xef, 0xff, 0xff, 0xff,
+];
+
+fn modexp_precompile_address() -> [u8; 20] {
+    let mut a = [0u8; 20];
+    a[19] = 0x05;
+    a
+}
+
+/// Convert 4 little-endian u64 limbs to a big-endian 32-byte buffer.
+fn limbs_to_be_bytes(a: &[u64; 4]) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    for i in 0..4 {
+        let b = a[3 - i].to_be_bytes();
+        out[i * 8..i * 8 + 8].copy_from_slice(&b);
+    }
+    out
+}
+
+/// Convert a 32-byte big-endian buffer to 4 little-endian u64 limbs.
+fn be_bytes_to_limbs(bytes: &[u8; 32]) -> [u64; 4] {
+    let mut limbs = [0u64; 4];
+    for i in 0..4 {
+        let b = &bytes[(3 - i) * 8..(3 - i) * 8 + 8];
+        limbs[i] = u64::from_be_bytes([
+            b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+        ]);
+    }
+    limbs
+}
+
+/// Modular inverse in NORMAL (non-Montgomery) form via the EVM `modexp`
+/// precompile at address 0x05, computing `a^(p-2) mod p` (Fermat's little
+/// theorem).  Returns None if `a == 0`.  Assumes P is an odd prime.
+///
+/// modexp input layout (EIP-198):
+///   [0..32):   len(B) = 32  (big-endian u256)
+///   [32..64):  len(E) = 32
+///   [64..96):  len(M) = 32
+///   [96..128): B  (big-endian)
+///   [128..160): E = p - 2  (big-endian)
+///   [160..192): M = p      (big-endian)
+/// Output: 32 bytes big-endian `B^E mod M`.
+fn mod_inverse_normal_modexp(a: &[u64; 4]) -> Option<[u64; 4]> {
+    if is_zero256(a) {
+        return None;
+    }
+
+    let base_be = limbs_to_be_bytes(a);
+
+    let mut input = [0u8; 192];
+    // len(B), len(E), len(M) — all 32, encoded as big-endian u256.
+    input[31] = 32;
+    input[63] = 32;
+    input[95] = 32;
+    // B
+    input[96..128].copy_from_slice(&base_be);
+    // E = p - 2
+    input[128..160].copy_from_slice(&P_MINUS_2_BE);
+    // M = p
+    input[160..192].copy_from_slice(&P_BE);
+
+    let mut output = [0u8; 32];
+    let mut output_ref: &mut [u8] = &mut output;
+    let target = modexp_precompile_address();
+    let gas = api::gas_left() / 2;
+    let _ = api::call(
+        CallFlags::empty(),
+        &target,
+        gas,
+        u64::MAX,
+        &[0u8; 32], // deposit
+        &[0u8; 32], // value
+        &input,
+        Some(&mut output_ref),
+    );
+
+    Some(be_bytes_to_limbs(&output))
+}
+
 /// Modular inverse in NORMAL (non-Montgomery) form via binary extended GCD.
 /// Returns None if a == 0.  Assumes P is an odd prime.
-fn mod_inverse_normal(a: &[u64; 4]) -> Option<[u64; 4]> {
+/// Kept as a fallback / reference; the public `Fr::inverse` now uses the
+/// `modexp` precompile (see `mod_inverse_normal_modexp`).
+#[allow(dead_code)]
+fn mod_inverse_normal_extgcd(a: &[u64; 4]) -> Option<[u64; 4]> {
     if is_zero256(a) { return None; }
 
     let mut u = *a;

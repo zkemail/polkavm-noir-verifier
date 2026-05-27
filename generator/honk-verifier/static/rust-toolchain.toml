@@ -1,3 +1,10 @@
 [toolchain]
-channel = "nightly"
+# Pinned to a known-good nightly. The previous "channel = nightly" floating
+# pointer required defensive workarounds in src/honk/fr.rs against LLVM bugs
+# on the RV64E target (#[inline(never)] mac, manually-unrolled mont_mul,
+# no-i128 add4/sub4, binary-extGCD inversion). On this nightly those
+# workarounds are unnecessary and removing them saves ~13% verify gas.
+# If you bump this, re-validate that scripts/test.sh still passes 5/5 and
+# the verify gas hasn't regressed before merging.
+channel = "nightly-2026-04-20"
 components = ["rust-src"]

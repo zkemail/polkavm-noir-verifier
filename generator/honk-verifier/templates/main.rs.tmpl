@@ -65,8 +65,18 @@ fn read_u256_as_usize(bytes: &[u8]) -> Option<usize> {
     Some(u64::from_be_bytes(val) as usize)
 }
 
+/// Outcome of parsing the `verify(bytes,bytes32[])` calldata.
+enum ParseResult {
+    /// Decoded successfully and the public-inputs array has the expected length.
+    Ok((Vec<u8>, Vec<[u8; 32]>)),
+    /// ABI decoded, but the public-inputs array length doesn't match NUMBER_OF_PUBLIC_INPUTS.
+    /// Mapped to REVM's `PublicInputsLengthWrong()` by the caller.
+    PublicInputsLenWrong,
+}
+
 /// Manual ABI decode of verify(bytes proof, bytes32[] publicInputs).
-fn parse_verify_args(data: &[u8]) -> Option<(Vec<u8>, Vec<[u8; 32]>)> {
+/// Returns `None` for any other ABI shape failure (mapped to generic revert).
+fn parse_verify_args(data: &[u8]) -> Option<ParseResult> {
     if data.len() < 64 {
         return None;
     }
@@ -94,11 +104,11 @@ fn parse_verify_args(data: &[u8]) -> Option<(Vec<u8>, Vec<[u8; 32]>)> {
         return None;
     }
     if arr_len != {{NUM_PUB}} {
-        return None;
+        return Some(ParseResult::PublicInputsLenWrong);
     }
 {{PUB_INPUT_PARSING}}
 
-    Some((proof_bytes, public_inputs))
+    Some(ParseResult::Ok((proof_bytes, public_inputs)))
 }
 
 /// UltraHonk proof size in bytes for the current protocol (bb v0.84.0,
@@ -106,12 +116,32 @@ fn parse_verify_args(data: &[u8]) -> Option<(Vec<u8>, Vec<[u8; 32]>)> {
 /// 8 G1·128 + 28·8·Fr·32 + 40·Fr·32 + 27 G1·128 + 28·Fr·32 + 2 G1·128 = 14080.
 const PROOF_SIZE: usize = 14080;
 
-/// Return-byte protocol for `verify(bytes,bytes32[])`:
-///   0x01           = valid proof, all checks passed
-///   100 + i (0x64..) = sumcheck round i `check_sum` mismatch
-///   200 (0xC8)     = sumcheck grand-Honk relation sum mismatch
-///   50  (0x32)     = shplemini / KZG pairing check failed
-const RC_SUCCESS: u8 = 1;
+/// Verifier return-data protocol (matches REVM-built HonkVerifier.sol's
+/// revert behaviour on failure; success is a single 0x01 byte rather than
+/// the strict-Solidity 32-byte `bool true` ABI because pallet-revive's
+/// EVM-RPC adapter currently flags multi-byte returns as `status=0`
+/// (reverted) in transaction receipts even when the contract executed
+/// successfully — see notes in FINDINGS. Clients should decode the return
+/// as `bytes1` (`0x01` = success) and rely on the custom-error selector
+/// in revert data for failure cases.
+const RETURN_TRUE_BYTE: [u8; 1] = [1];
+
+/// keccak256("ProofLengthWrong()")[:4] — matches HonkVerifier.sol
+const ERR_PROOF_LENGTH_WRONG: [u8; 4] = [0xed, 0x74, 0xac, 0x0a];
+/// keccak256("PublicInputsLengthWrong()")[:4]
+const ERR_PUBLIC_INPUTS_LENGTH_WRONG: [u8; 4] = [0xfa, 0x06, 0x65, 0x93];
+/// keccak256("SumcheckFailed()")[:4]
+const ERR_SUMCHECK_FAILED: [u8; 4] = [0x9f, 0xc3, 0xa2, 0x18];
+/// keccak256("ShpleminiFailed()")[:4]
+const ERR_SHPLEMINI_FAILED: [u8; 4] = [0xa5, 0xd8, 0x2e, 0x8a];
+
+/// Internal verifier result code (kept for granular logging, mapped to a
+/// Solidity custom error at the contract boundary):
+///   0     = success
+///   100+i = sumcheck round i check_sum mismatch → SumcheckFailed
+///   200   = grand-Honk relation sum mismatch    → SumcheckFailed
+///   50    = shplemini / KZG pairing failed      → ShpleminiFailed
+const RC_SUCCESS: u8 = 0;
 const RC_SHPLEMINI_FAILED: u8 = 50;
 
 fn handle_verify(length: usize) {
@@ -122,18 +152,30 @@ fn handle_verify(length: usize) {
     }
 
     let (proof_bytes, public_inputs) = match parse_verify_args(&data) {
-        Some(x) => x,
+        Some(ParseResult::Ok(x)) => x,
+        Some(ParseResult::PublicInputsLenWrong) => {
+            api::return_value(ReturnFlags::REVERT, &ERR_PUBLIC_INPUTS_LENGTH_WRONG);
+        }
         None => {
             api::return_value(ReturnFlags::REVERT, b"ABI_DECODE_FAILED");
         }
     };
 
     if proof_bytes.len() != PROOF_SIZE {
-        api::return_value(ReturnFlags::REVERT, b"PROOF_LENGTH_WRONG");
+        api::return_value(ReturnFlags::REVERT, &ERR_PROOF_LENGTH_WRONG);
     }
 
     let code = do_verify(&proof_bytes, &public_inputs);
-    api::return_value(ReturnFlags::empty(), &[code]);
+    match code {
+        RC_SUCCESS => api::return_value(ReturnFlags::empty(), &RETURN_TRUE_BYTE),
+        RC_SHPLEMINI_FAILED => {
+            api::return_value(ReturnFlags::REVERT, &ERR_SHPLEMINI_FAILED);
+        }
+        _ => {
+            // 100+i sumcheck round, or 200 grand-Honk: both map to SumcheckFailed()
+            api::return_value(ReturnFlags::REVERT, &ERR_SUMCHECK_FAILED);
+        }
+    }
 }
 
 fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {

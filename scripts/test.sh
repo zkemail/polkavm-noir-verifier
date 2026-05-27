@@ -61,7 +61,7 @@ call_verify() {
 
 # Test 1: Valid proof
 RESULT=$(call_verify "$PROOF_HEX" "$PUB_ARRAY")
-if [[ "$RESULT" == *"0x01"* ]]; then
+if [[ "$RESULT" == "0x01" ]]; then
   echo "Test 1 - Valid proof:              PASS"; PASSED=$((PASSED+1))
 else
   echo "Test 1 - Valid proof:              FAIL ($RESULT)"
@@ -74,7 +74,7 @@ for ((i=64; i<${#PUB_HEX}; i+=64)); do
 done
 BAD_ARRAY+="]"
 RESULT=$(call_verify "$PROOF_HEX" "$BAD_ARRAY")
-if [[ "$RESULT" == *"0x00"* ]]; then
+if [[ "$RESULT" != "0x01" ]]; then
   echo "Test 2 - Wrong public input:       PASS"; PASSED=$((PASSED+1))
 else
   echo "Test 2 - Wrong public input:       FAIL ($RESULT)"
@@ -86,7 +86,7 @@ d=bytes.fromhex('${PROOF_HEX:2}')
 b=bytearray(d); b[2000]^=1; print(b.hex())
 ")"
 RESULT=$(call_verify "$CORRUPT1" "$PUB_ARRAY")
-if [[ "$RESULT" == *"0x00"* ]]; then
+if [[ "$RESULT" != "0x01" ]]; then
   echo "Test 3 - Corrupted univariate:     PASS"; PASSED=$((PASSED+1))
 else
   echo "Test 3 - Corrupted univariate:     FAIL ($RESULT)"
@@ -98,7 +98,7 @@ d=bytes.fromhex('${PROOF_HEX:2}')
 b=bytearray(d); b[4000]^=1; print(b.hex())
 ")"
 RESULT=$(call_verify "$CORRUPT2" "$PUB_ARRAY")
-if [[ "$RESULT" == *"0x00"* ]]; then
+if [[ "$RESULT" != "0x01" ]]; then
   echo "Test 4 - Corrupted evaluation:     PASS"; PASSED=$((PASSED+1))
 else
   echo "Test 4 - Corrupted evaluation:     FAIL ($RESULT)"
@@ -110,7 +110,7 @@ d=bytes.fromhex('${PROOF_HEX:2}')
 b=bytearray(d); b[100]^=1; print(b.hex())
 ")"
 RESULT=$(call_verify "$CORRUPT3" "$PUB_ARRAY")
-if [[ "$RESULT" == *"0x00"* ]]; then
+if [[ "$RESULT" != "0x01" ]]; then
   echo "Test 5 - Corrupted commitment:     PASS"; PASSED=$((PASSED+1))
 else
   echo "Test 5 - Corrupted commitment:     FAIL ($RESULT)"

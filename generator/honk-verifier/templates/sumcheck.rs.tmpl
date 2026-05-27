@@ -67,6 +67,3 @@ pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 
     }
 }
 
-pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {
-    verify_sumcheck_diag(proof, t, log_n) == 0
-}

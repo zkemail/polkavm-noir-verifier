@@ -101,6 +101,19 @@ fn parse_verify_args(data: &[u8]) -> Option<(Vec<u8>, Vec<[u8; 32]>)> {
     Some((proof_bytes, public_inputs))
 }
 
+/// UltraHonk proof size in bytes for the current protocol (bb v0.84.0,
+/// CONST_PROOF_SIZE_LOG_N = 28, NUMBER_OF_ENTITIES = 40).
+/// 8 G1·128 + 28·8·Fr·32 + 40·Fr·32 + 27 G1·128 + 28·Fr·32 + 2 G1·128 = 14080.
+const PROOF_SIZE: usize = 14080;
+
+/// Return-byte protocol for `verify(bytes,bytes32[])`:
+///   0x01           = valid proof, all checks passed
+///   100 + i (0x64..) = sumcheck round i `check_sum` mismatch
+///   200 (0xC8)     = sumcheck grand-Honk relation sum mismatch
+///   50  (0x32)     = shplemini / KZG pairing check failed
+const RC_SUCCESS: u8 = 1;
+const RC_SHPLEMINI_FAILED: u8 = 50;
+
 fn handle_verify(length: usize) {
     let data_len = length.saturating_sub(4);
     let mut data = alloc::vec![0u8; data_len];
@@ -115,15 +128,15 @@ fn handle_verify(length: usize) {
         }
     };
 
-    let ok = do_verify(&proof_bytes, &public_inputs);
-    if ok {
-        api::return_value(ReturnFlags::empty(), &[1u8]);
-    } else {
-        api::return_value(ReturnFlags::empty(), &[0u8]);
+    if proof_bytes.len() != PROOF_SIZE {
+        api::return_value(ReturnFlags::REVERT, b"PROOF_LENGTH_WRONG");
     }
+
+    let code = do_verify(&proof_bytes, &public_inputs);
+    api::return_value(ReturnFlags::empty(), &[code]);
 }
 
-fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> bool {
+fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> u8 {
     let vk = load_vk();
     let proof = load_proof(proof_bytes);
 
@@ -145,11 +158,16 @@ fn do_verify(proof_bytes: &[u8], public_inputs: &[[u8; 32]]) -> bool {
         vk.public_inputs_size,
     );
 
-    if !sumcheck::verify_sumcheck(&proof, &t, LOG_N) {
-        return false;
+    let sumcheck_code = sumcheck::verify_sumcheck_diag(&proof, &t, LOG_N);
+    if sumcheck_code != 0 {
+        return sumcheck_code;
     }
 
-    honk::shplemini::verify_shplemini(&proof, &vk, &t)
+    if !honk::shplemini::verify_shplemini(&proof, &vk, &t) {
+        return RC_SHPLEMINI_FAILED;
+    }
+
+    RC_SUCCESS
 }
 
 fn compute_public_input_delta(

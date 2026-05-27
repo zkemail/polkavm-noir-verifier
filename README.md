@@ -97,15 +97,15 @@ cd ../..
 
 ## Requirements
 
-- [Rust](https://rustup.rs/) (nightly 2025+)
-- [polkatool](https://github.com/nicpottier/polkatool) for PolkaVM linking
+- [Rust](https://rustup.rs/) nightly — pinned to `nightly-2026-04-20` via `generator/honk-verifier/static/rust-toolchain.toml`
+- [polkatool](https://github.com/paritytech/polkavm) **0.25.0** for PolkaVM linking. Install via `cargo install polkatool --version 0.25.0 --locked`. Newer versions emit bytecode Paseo's pallet-revive rejects — version is pinned to match the chain's pallet-revive runtime.
 - Node.js 18+ (for generator and deploy scripts)
 - [Foundry](https://getfoundry.sh/) (`cast`) for running tests
 - PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1111))
 
 Only needed if compiling circuits from source:
-- [nargo](https://noir-lang.org/) 1.0.0-beta.5+
-- [bb](https://github.com/AztecProtocol/barretenberg) (Barretenberg) 0.84.0+
+- [nargo](https://noir-lang.org/) `1.0.0-beta.5` (install via `noirup --version 1.0.0-beta.5`)
+- [bb](https://github.com/AztecProtocol/barretenberg) (Barretenberg) `v0.84.0` (installed automatically by `bbup` to match the pinned nargo version)
 
 ## Architecture
 

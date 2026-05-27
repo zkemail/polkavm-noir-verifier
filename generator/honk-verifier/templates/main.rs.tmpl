@@ -16,12 +16,8 @@ use honk::transcript::generate_transcript;
 use vk::load_vk;
 
 #[global_allocator]
-static mut ALLOC: picoalloc::Mutex<picoalloc::Allocator<picoalloc::ArrayPointer<{ {{HEAP_KB}} * 1024 }>>> = {
-    static mut ARRAY: picoalloc::Array<{ {{HEAP_KB}} * 1024 }> = picoalloc::Array([0u8; {{HEAP_KB}} * 1024]);
-    picoalloc::Mutex::new(picoalloc::Allocator::new(unsafe {
-        picoalloc::ArrayPointer::new(&raw mut ARRAY)
-    }))
-}; // {{HEAP_KB}}KB heap for {{NUM_PUB}} public inputs
+static ALLOC: simplealloc::SimpleAlloc<{ {{HEAP_KB}} * 1024 }> = simplealloc::SimpleAlloc::new();
+// {{HEAP_KB}}KB heap for {{NUM_PUB}} public inputs (bump allocator — no free during verify)
 
 /// Function selector for verify(bytes,bytes32[]) = 0xea50d0e4
 const VERIFY_SELECTOR: [u8; 4] = [0xea, 0x50, 0xd0, 0xe4];

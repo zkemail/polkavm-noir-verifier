@@ -9,7 +9,10 @@
 ///
 /// Each sub-relation formula is identical to the Solidity implementation.
 /// The scaling by alpha powers and pow evaluation matches TranscriptLib.
-use super::fr::Fr;
+use super::fr::{
+    Fr, FR_LIMB_2_68, FR_NEG_HALF, FR_NEG_ONE, FR_NEG_THREE, FR_NEG_TWO, FR_NINE, FR_SEVENTEEN,
+    FR_SUBLIMB_2_14, FR_THREE, FR_TWO, POSEIDON_DIAG,
+};
 use super::proof::NUMBER_OF_ENTITIES;
 use super::transcript::{RelationParameters, NUMBER_OF_ALPHAS};
 
@@ -61,67 +64,30 @@ fn w(p: &[Fr; NUMBER_OF_ENTITIES], wire: usize) -> Fr {
     p[wire]
 }
 
-fn fr(v: u64) -> Fr {
-    Fr::from_u64(v)
-}
-
-fn fr_from_hex(hex: &str) -> Fr {
-    let mut bytes = [0u8; 32];
-    let b = hex.as_bytes();
-    for (byte, pair) in bytes.iter_mut().zip(b.chunks(2)) {
-        *byte = (nibble(pair[0]) << 4) | nibble(pair[1]);
-    }
-    Fr::from_be_bytes(&bytes)
-}
-
-fn nibble(b: u8) -> u8 {
-    match b {
-        b'0'..=b'9' => b - b'0',
-        b'a'..=b'f' => b - b'a' + 10,
-        b'A'..=b'F' => b - b'A' + 10,
-        _ => 0,
-    }
-}
-
-/// 2^68 as Fr (hardcoded to avoid runtime variable-bound loop which is broken on this target)
-fn limb_size_const() -> Fr {
-    // 2^68 in big-endian 32 bytes
-    Fr::from_be_bytes(&[0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0x10, 0,0,0,0,0,0,0,0])
-}
-
-/// 2^14 as Fr (hardcoded)
-fn sublimb_shift_const() -> Fr {
-    Fr::from_u64(1u64 << 14)
-}
-
 /// Ultra Arithmetic Relation (2 subrelations: evals[0], evals[1])
 fn accumulate_arithmetic(
     p: &[Fr; NUMBER_OF_ENTITIES],
     evals: &mut [Fr; NUMBER_OF_SUBRELATIONS],
     domain_sep: Fr,
 ) {
-    // NEG_HALF = -1/2 mod P = (P-1)/2 negated = -inv(2)
-    let two = fr(2);
-    let neg_half = -Fr::one() * two.inverse().unwrap();
-
     let q_arith = w(p, Q_ARITH);
 
     {
-        let mut accum = (q_arith - fr(3)) * (w(p, Q_M) * w(p, W_R) * w(p, W_L)) * neg_half;
+        let mut accum = (q_arith - FR_THREE) * (w(p, Q_M) * w(p, W_R) * w(p, W_L)) * FR_NEG_HALF;
         accum = accum
             + w(p, Q_L) * w(p, W_L)
             + w(p, Q_R) * w(p, W_R)
             + w(p, Q_O) * w(p, W_O)
             + w(p, Q_4) * w(p, W_4)
             + w(p, Q_C);
-        accum = accum + (q_arith - Fr::one()) * w(p, W_4_SHIFT);
+        accum = accum + (q_arith - Fr::ONE) * w(p, W_4_SHIFT);
         accum = accum * q_arith * domain_sep;
         evals[0] = accum;
     }
 
     {
         let mut accum = w(p, W_L) + w(p, W_4) - w(p, W_L_SHIFT) + w(p, Q_M);
-        accum = accum * (q_arith - fr(2)) * (q_arith - Fr::one()) * q_arith * domain_sep;
+        accum = accum * (q_arith - FR_TWO) * (q_arith - Fr::ONE) * q_arith * domain_sep;
         evals[1] = accum;
     }
 }
@@ -181,11 +147,10 @@ fn accumulate_log_derivative_lookup(
     let read_inverse = w(p, LOOKUP_INVERSES) * write_term;
     let write_inverse = w(p, LOOKUP_INVERSES) * read_term;
 
-    let inverse_exists_xor = w(p, LOOKUP_READ_TAGS) + w(p, Q_LOOKUP)
-        - w(p, LOOKUP_READ_TAGS) * w(p, Q_LOOKUP);
+    let inverse_exists_xor =
+        w(p, LOOKUP_READ_TAGS) + w(p, Q_LOOKUP) - w(p, LOOKUP_READ_TAGS) * w(p, Q_LOOKUP);
 
-    evals[4] =
-        (read_term * write_term * w(p, LOOKUP_INVERSES) - inverse_exists_xor) * domain_sep;
+    evals[4] = (read_term * write_term * w(p, LOOKUP_INVERSES) - inverse_exists_xor) * domain_sep;
 
     evals[5] = w(p, Q_LOOKUP) * read_inverse - w(p, LOOKUP_READ_COUNTS) * write_inverse;
 }
@@ -196,9 +161,9 @@ fn accumulate_delta_range(
     evals: &mut [Fr; NUMBER_OF_SUBRELATIONS],
     domain_sep: Fr,
 ) {
-    let minus_one = -Fr::one();
-    let minus_two = -fr(2);
-    let minus_three = -fr(3);
+    let minus_one = FR_NEG_ONE;
+    let minus_two = FR_NEG_TWO;
+    let minus_three = FR_NEG_THREE;
 
     let delta_1 = w(p, W_R) - w(p, W_L);
     let delta_2 = w(p, W_O) - w(p, W_R);
@@ -240,7 +205,7 @@ fn accumulate_elliptic(
     evals: &mut [Fr; NUMBER_OF_SUBRELATIONS],
     domain_sep: Fr,
 ) {
-    let grumpkin_b_neg = fr(17);
+    let grumpkin_b_neg = FR_SEVENTEEN;
 
     let x_1 = w(p, W_R);
     let y_1 = w(p, W_O);
@@ -258,38 +223,29 @@ fn accumulate_elliptic(
     {
         let y2_sqr = y_2 * y_2;
         let y1y2 = y_1 * y_2 * q_sign;
-        let x_add_identity =
-            (x_3 + x_2 + x_1) * x_diff * x_diff - y2_sqr - y1_sqr + y1y2 + y1y2;
-        evals[10] = x_add_identity
-            * domain_sep
-            * w(p, Q_ELLIPTIC)
-            * (Fr::one() - q_is_double);
+        let x_add_identity = (x_3 + x_2 + x_1) * x_diff * x_diff - y2_sqr - y1_sqr + y1y2 + y1y2;
+        evals[10] = x_add_identity * domain_sep * w(p, Q_ELLIPTIC) * (Fr::one() - q_is_double);
     }
 
     {
         let y1_plus_y3 = y_1 + y_3;
         let y_diff = y_2 * q_sign - y_1;
         let y_add_identity = y1_plus_y3 * x_diff + (x_3 - x_1) * y_diff;
-        evals[11] =
-            y_add_identity * domain_sep * w(p, Q_ELLIPTIC) * (Fr::one() - q_is_double);
+        evals[11] = y_add_identity * domain_sep * w(p, Q_ELLIPTIC) * (Fr::one() - q_is_double);
     }
 
     {
         let x_pow_4 = (y1_sqr + grumpkin_b_neg) * x_1;
-        let y1_sqr_mul_4 = (y1_sqr + y1_sqr) * fr(2);
-        let x1_pow_4_mul_9 = x_pow_4 * fr(9);
-        let x_double_identity =
-            (x_3 + x_1 + x_1) * y1_sqr_mul_4 - x1_pow_4_mul_9;
-        evals[10] = evals[10]
-            + x_double_identity * domain_sep * w(p, Q_ELLIPTIC) * q_is_double;
+        let y1_sqr_mul_4 = (y1_sqr + y1_sqr) * FR_TWO;
+        let x1_pow_4_mul_9 = x_pow_4 * FR_NINE;
+        let x_double_identity = (x_3 + x_1 + x_1) * y1_sqr_mul_4 - x1_pow_4_mul_9;
+        evals[10] = evals[10] + x_double_identity * domain_sep * w(p, Q_ELLIPTIC) * q_is_double;
     }
 
     {
         let x1_sqr_mul_3 = (x_1 + x_1 + x_1) * x_1;
-        let y_double_identity =
-            x1_sqr_mul_3 * (x_1 - x_3) - (y_1 + y_1) * (y_1 + y_3);
-        evals[11] = evals[11]
-            + y_double_identity * domain_sep * w(p, Q_ELLIPTIC) * q_is_double;
+        let y_double_identity = x1_sqr_mul_3 * (x_1 - x_3) - (y_1 + y_1) * (y_1 + y_3);
+        evals[11] = evals[11] + y_double_identity * domain_sep * w(p, Q_ELLIPTIC) * q_is_double;
     }
 }
 
@@ -300,12 +256,11 @@ fn accumulate_auxiliary(
     evals: &mut [Fr; NUMBER_OF_SUBRELATIONS],
     domain_sep: Fr,
 ) {
-    let limb_size = limb_size_const();
-    let sublimb_shift = sublimb_shift_const();
-    let minus_one = -Fr::one();
+    let limb_size = FR_LIMB_2_68;
+    let sublimb_shift = FR_SUBLIMB_2_14;
+    let minus_one = FR_NEG_ONE;
 
-    let limb_subproduct =
-        w(p, W_L) * w(p, W_R_SHIFT) + w(p, W_L_SHIFT) * w(p, W_R);
+    let limb_subproduct = w(p, W_L) * w(p, W_R_SHIFT) + w(p, W_L_SHIFT) * w(p, W_R);
 
     let non_native_field_gate_2 = {
         let v = (w(p, W_L) * w(p, W_4) + w(p, W_R) * w(p, W_O) - w(p, W_O_SHIFT)) * limb_size
@@ -314,16 +269,13 @@ fn accumulate_auxiliary(
         v * w(p, Q_4)
     };
 
-    let limb_subproduct2 =
-        limb_subproduct * limb_size + w(p, W_L_SHIFT) * w(p, W_R_SHIFT);
-    let non_native_field_gate_1 =
-        (limb_subproduct2 - (w(p, W_O) + w(p, W_4))) * w(p, Q_O);
+    let limb_subproduct2 = limb_subproduct * limb_size + w(p, W_L_SHIFT) * w(p, W_R_SHIFT);
+    let non_native_field_gate_1 = (limb_subproduct2 - (w(p, W_O) + w(p, W_4))) * w(p, Q_O);
     let non_native_field_gate_3 =
         (limb_subproduct2 + w(p, W_4) - (w(p, W_O_SHIFT) + w(p, W_4_SHIFT))) * w(p, Q_M);
 
     let non_native_field_identity =
-        (non_native_field_gate_1 + non_native_field_gate_2 + non_native_field_gate_3)
-            * w(p, Q_R);
+        (non_native_field_gate_1 + non_native_field_gate_2 + non_native_field_gate_3) * w(p, Q_R);
 
     let limb_accumulator_1 = {
         let mut v = w(p, W_R_SHIFT) * sublimb_shift;
@@ -346,10 +298,7 @@ fn accumulate_auxiliary(
     let limb_accumulator_identity = (limb_accumulator_1 + limb_accumulator_2) * w(p, Q_O);
 
     let memory_record_check = {
-        let v = w(p, W_O) * rp.eta_three
-            + w(p, W_R) * rp.eta_two
-            + w(p, W_L) * rp.eta
-            + w(p, Q_C);
+        let v = w(p, W_O) * rp.eta_three + w(p, W_R) * rp.eta_two + w(p, W_L) * rp.eta + w(p, Q_C);
         v
     };
     let partial_record_check = memory_record_check;
@@ -366,9 +315,8 @@ fn accumulate_auxiliary(
         * (w(p, Q_L) * w(p, Q_R))
         * (w(p, Q_AUX) * domain_sep);
 
-    evals[14] = index_is_monotonically_increasing
-        * (w(p, Q_L) * w(p, Q_R))
-        * (w(p, Q_AUX) * domain_sep);
+    evals[14] =
+        index_is_monotonically_increasing * (w(p, Q_L) * w(p, Q_R)) * (w(p, Q_AUX) * domain_sep);
 
     let rom_consistency_check_identity = memory_record_check * (w(p, Q_L) * w(p, Q_R));
 
@@ -395,12 +343,9 @@ fn accumulate_auxiliary(
         * w(p, Q_ARITH)
         * (w(p, Q_AUX) * domain_sep);
 
-    evals[16] = index_is_monotonically_increasing
-        * w(p, Q_ARITH)
-        * (w(p, Q_AUX) * domain_sep);
+    evals[16] = index_is_monotonically_increasing * w(p, Q_ARITH) * (w(p, Q_AUX) * domain_sep);
 
-    evals[17] =
-        next_gate_access_type_is_boolean * w(p, Q_ARITH) * (w(p, Q_AUX) * domain_sep);
+    evals[17] = next_gate_access_type_is_boolean * w(p, Q_ARITH) * (w(p, Q_AUX) * domain_sep);
 
     let ram_consistency_check_identity = access_check * w(p, Q_ARITH);
 
@@ -439,8 +384,8 @@ fn accumulate_poseidon_external(
     let t1 = u3 + u4;
     let t2 = u2 + u2 + t1;
     let t3 = u4 + u4 + t0;
-    let v4 = (t1 + t1) * fr(2) + t3;
-    let v2 = (t0 + t0) * fr(2) + t2;
+    let v4 = (t1 + t1) * FR_TWO + t3;
+    let v2 = (t0 + t0) * FR_TWO + t2;
     let v1 = t3 + v2;
     let v3 = t2 + v4;
 
@@ -457,12 +402,7 @@ fn accumulate_poseidon_internal(
     evals: &mut [Fr; NUMBER_OF_SUBRELATIONS],
     domain_sep: Fr,
 ) {
-    let diag: [Fr; 4] = [
-        fr_from_hex("10dc6e9c006ea38b04b1e03b4bd9490c0d03f98929ca1d7fb56821fd19d3b6e7"),
-        fr_from_hex("0c28145b6a44df3e0149b3d0a30b3bb599df9756d4dd9b84a86b38cfb45a740b"),
-        fr_from_hex("00544b8338791518b2c7645a50392798b21f75bb60e3596170067d00141cac15"),
-        fr_from_hex("222c01175718386f2e2e82eb122789e352e105a3b8fa852613bc534433ee428b"),
-    ];
+    let diag = &POSEIDON_DIAG;
 
     let s1 = w(p, W_L) + w(p, Q_L);
     let u1 = s1 * s1 * s1 * s1 * s1;

@@ -8,7 +8,7 @@
 /// precompile calls rather than a single MSM precompile.
 /// Final pairing check uses ecPairing (EIP-197).
 extern crate alloc;
-use super::fr::Fr;
+use super::fr::{Fr, FR_TWO};
 use super::fr_utils::{fq_from_split, fr_to_scalar};
 use super::g1::{ec_add, ec_mul, ec_pairing_check, negate, G1Point};
 use super::proof::{Proof, CONST_PROOF_SIZE_LOG_N, NUMBER_OF_ENTITIES};
@@ -48,7 +48,7 @@ fn compute_fold_pos_evaluations(
         let challenge_power = gemini_eval_challenge_powers[i - 1];
         let u = sumcheck_u_challenges[i - 1];
 
-        let numerator = challenge_power * acc * Fr::from_u64(2)
+        let numerator = challenge_power * acc * FR_TWO
             - gemini_evaluations[i - 1] * (challenge_power * (Fr::one() - u) - u);
         let denominator = challenge_power * (Fr::one() - u) + u;
 
@@ -79,8 +79,8 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
     let neg_inv_denom = (t.shplonk_z + powers_of_r[0]).inverse().unwrap();
 
     let unshifted_scalar = pos_inv_denom + t.shplonk_nu * neg_inv_denom;
-    let shifted_scalar = t.gemini_r.inverse().unwrap()
-        * (pos_inv_denom - t.shplonk_nu * neg_inv_denom);
+    let shifted_scalar =
+        t.gemini_r.inverse().unwrap() * (pos_inv_denom - t.shplonk_nu * neg_inv_denom);
 
     scalars[0] = Fr::one();
     commitments[0] = convert_proof_point(&proof.shplonk_q);
@@ -186,7 +186,10 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
     let mut g1_one_two_y = [0u8; 32];
     g1_one_two_x[31] = 1;
     g1_one_two_y[31] = 2;
-    let g1_one_two = G1Point { x: g1_one_two_x, y: g1_one_two_y };
+    let g1_one_two = G1Point {
+        x: g1_one_two_x,
+        y: g1_one_two_y,
+    };
 
     let g1_idx = NUMBER_OF_ENTITIES + CONST_PROOF_SIZE_LOG_N;
     commitments[g1_idx] = g1_one_two;

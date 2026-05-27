@@ -1,52 +1,9 @@
-use crate::honk::fr::Fr;
+use crate::honk::fr::{
+    Fr, BARYCENTRIC_DENOMS, FR_FIVE, FR_FOUR, FR_SEVEN, FR_SIX, FR_THREE, FR_TWO,
+};
 use crate::honk::proof::{Proof, BATCHED_RELATION_PARTIAL_LENGTH};
 use crate::honk::relations::accumulate_relation_evaluations;
 use crate::honk::transcript::Transcript;
-
-/// Barycentric Lagrange denominators (from Solidity BARYCENTRIC_LAGRANGE_DENOMINATORS)
-fn barycentric_lagrange_denominators() -> [Fr; BATCHED_RELATION_PARTIAL_LENGTH] {
-    [
-        fr_from_hex("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffec51"),
-        fr_from_hex("00000000000000000000000000000000000000000000000000000000000002d0"),
-        fr_from_hex("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffff11"),
-        fr_from_hex("0000000000000000000000000000000000000000000000000000000000000090"),
-        fr_from_hex("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffff71"),
-        fr_from_hex("00000000000000000000000000000000000000000000000000000000000000f0"),
-        fr_from_hex("30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffd31"),
-        fr_from_hex("00000000000000000000000000000000000000000000000000000000000013b0"),
-    ]
-}
-
-fn fr_from_hex(hex: &str) -> Fr {
-    let hex = if hex.len() < 64 {
-        let pad = 64 - hex.len();
-        let mut s = [b'0'; 64];
-        let src = hex.as_bytes();
-        s[pad..].copy_from_slice(src);
-        let mut bytes = [0u8; 32];
-        for (byte, pair) in bytes.iter_mut().zip(s.chunks(2)) {
-            *byte = nibble(pair[0]) << 4 | nibble(pair[1]);
-        }
-        return Fr::from_be_bytes(&bytes);
-    } else {
-        hex
-    };
-    let b = hex.as_bytes();
-    let mut bytes = [0u8; 32];
-    for (byte, pair) in bytes.iter_mut().zip(b.chunks(2)) {
-        *byte = nibble(pair[0]) << 4 | nibble(pair[1]);
-    }
-    Fr::from_be_bytes(&bytes)
-}
-
-fn nibble(b: u8) -> u8 {
-    match b {
-        b'0'..=b'9' => b - b'0',
-        b'a'..=b'f' => b - b'a' + 10,
-        b'A'..=b'F' => b - b'A' + 10,
-        _ => 0,
-    }
-}
 
 fn check_sum(round_univariate: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH], round_target: Fr) -> bool {
     round_univariate[0] + round_univariate[1] == round_target
@@ -56,15 +13,15 @@ fn compute_next_target_sum(
     u: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH],
     challenge: Fr,
 ) -> Fr {
-    let d = barycentric_lagrange_denominators();
+    let d = &BARYCENTRIC_DENOMS;
     let c0 = challenge;
-    let c1 = challenge - Fr::from_u64(1);
-    let c2 = challenge - Fr::from_u64(2);
-    let c3 = challenge - Fr::from_u64(3);
-    let c4 = challenge - Fr::from_u64(4);
-    let c5 = challenge - Fr::from_u64(5);
-    let c6 = challenge - Fr::from_u64(6);
-    let c7 = challenge - Fr::from_u64(7);
+    let c1 = challenge - Fr::ONE;
+    let c2 = challenge - FR_TWO;
+    let c3 = challenge - FR_THREE;
+    let c4 = challenge - FR_FOUR;
+    let c5 = challenge - FR_FIVE;
+    let c6 = challenge - FR_SIX;
+    let c7 = challenge - FR_SEVEN;
 
     let numerator = c0 * c1 * c2 * c3 * c4 * c5 * c6 * c7;
 

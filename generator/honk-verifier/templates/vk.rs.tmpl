@@ -45,19 +45,17 @@ fn hex32(s: &str) -> [u8; 32] {
     let len = b.len();
     let mut out = [0u8; 32];
     if len == 64 {
-        for i in 0..32 {
-            out[i] = (nibble(b[i * 2]) << 4) | nibble(b[i * 2 + 1]);
+        for (i, slot) in out.iter_mut().enumerate() {
+            *slot = (nibble(b[i * 2]) << 4) | nibble(b[i * 2 + 1]);
         }
     } else {
         let pad = 64 - len;
-        let pad_bytes = pad / 2;
-        for i in 0..32 {
+        for (i, slot) in out.iter_mut().enumerate() {
             let nibble_idx = i * 2;
             let hi = if nibble_idx < pad { 0 } else { nibble(b[nibble_idx - pad]) };
             let lo_idx = nibble_idx + 1;
             let lo = if lo_idx < pad { 0 } else { nibble(b[lo_idx - pad]) };
-            out[i] = (hi << 4) | lo;
-            let _ = pad_bytes;
+            *slot = (hi << 4) | lo;
         }
     }
     out

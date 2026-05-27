@@ -55,18 +55,24 @@ function buildPubInputParsing(numPub: number): string {
 }
 
 function buildSumcheckRounds(logN: number): string {
+  // The template placeholder `{{SUMCHECK_ROUNDS}}` lives at column 4, so the
+  // first line of our output is auto-indented by 4 spaces; subsequent lines
+  // must supply their own indent. Body is shaped to be rustfmt-clean.
   const rounds: string[] = [];
   for (let i = 0; i < logN; i++) {
-    rounds.push(`    // Round ${i}
+    rounds.push(`// Round ${i}
     {
         let u = &proof.sumcheck_univariates[${i}];
-        if !check_sum(u, round_target) { return ${100 + i}; }
+        if !check_sum(u, round_target) {
+            return ${100 + i};
+        }
         let ch = t.sumcheck_u_challenges[${i}];
         round_target = compute_next_target_sum(u, ch);
-        pow_partial_evaluation = partially_evaluate_pow(t.gate_challenges[${i}], pow_partial_evaluation, ch);
+        pow_partial_evaluation =
+            partially_evaluate_pow(t.gate_challenges[${i}], pow_partial_evaluation, ch);
     }`);
   }
-  return rounds.join('\n');
+  return rounds.join('\n    ');
 }
 
 // --- Main generate function ---

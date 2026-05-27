@@ -8,7 +8,7 @@
 /// These are native implementations in the Polkadot runtime (not interpreted),
 /// making them much cheaper than pure-Rust EC arithmetic inside PolkaVM.
 /// Point format: uncompressed affine (x, y), each 32 bytes big-endian (Fq).
-use pallet_revive_uapi::{HostFn, HostFnImpl as api, CallFlags};
+use pallet_revive_uapi::{CallFlags, HostFn, HostFnImpl as api};
 
 /// A BN254 G1 affine point (uncompressed, big-endian field elements).
 #[derive(Clone, Copy, Debug)]
@@ -20,7 +20,10 @@ pub struct G1Point {
 impl G1Point {
     /// The point at infinity (identity).
     pub fn infinity() -> Self {
-        G1Point { x: [0u8; 32], y: [0u8; 32] }
+        G1Point {
+            x: [0u8; 32],
+            y: [0u8; 32],
+        }
     }
 
     /// True if this is the point at infinity.
@@ -36,12 +39,14 @@ pub fn negate(p: G1Point) -> G1Point {
         return p;
     }
     let q: [u8; 32] = [
-        0x30, 0x64, 0x4e, 0x72, 0xe1, 0x31, 0xa0, 0x29,
-        0xb8, 0x50, 0x45, 0xb6, 0x81, 0x81, 0x58, 0x5d,
-        0x97, 0x81, 0x6a, 0x91, 0x68, 0x71, 0xca, 0x8d,
-        0x3c, 0x20, 0x8c, 0x16, 0xd8, 0x7c, 0xfd, 0x47,
+        0x30, 0x64, 0x4e, 0x72, 0xe1, 0x31, 0xa0, 0x29, 0xb8, 0x50, 0x45, 0xb6, 0x81, 0x81, 0x58,
+        0x5d, 0x97, 0x81, 0x6a, 0x91, 0x68, 0x71, 0xca, 0x8d, 0x3c, 0x20, 0x8c, 0x16, 0xd8, 0x7c,
+        0xfd, 0x47,
     ];
-    G1Point { x: p.x, y: sub_fq(&q, &p.y) }
+    G1Point {
+        x: p.x,
+        y: sub_fq(&q, &p.y),
+    }
 }
 
 /// Subtract two 32-byte big-endian field elements: a - b (assumes a >= b in the field)
@@ -118,14 +123,9 @@ pub fn ec_mul(p: G1Point, scalar: &[u8; 32]) -> G1Point {
 /// ecPairing via precompile 0x08: returns true if product of pairings = 1.
 /// Expects pairs: [(G1_0, G2_0), (G1_1, G2_1)]
 /// G2 point format: (x_im, x_re, y_im, y_re) each 32 bytes (EVM order).
-pub fn ec_pairing_check(
-    p0: G1Point,
-    g2_0: &[u8; 128],
-    p1: G1Point,
-    g2_1: &[u8; 128],
-) -> bool {
+pub fn ec_pairing_check(p0: G1Point, g2_0: &[u8; 128], p1: G1Point, g2_1: &[u8; 128]) -> bool {
     let mut input = [0u8; 384]; // 2 pairs × 192 bytes each
-    // Pair 0: G1(64 bytes) + G2(128 bytes)
+                                // Pair 0: G1(64 bytes) + G2(128 bytes)
     input[0..32].copy_from_slice(&p0.x);
     input[32..64].copy_from_slice(&p0.y);
     input[64..192].copy_from_slice(g2_0);

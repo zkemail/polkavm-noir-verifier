@@ -312,16 +312,12 @@ impl Mul for Fr {
 }
 
 /// Multiply-accumulate: acc + a*b + carry_in → (lo, hi).
-/// #[inline(never)] forces LLVM to handle each u128 operation in isolation,
-/// preventing register allocation bugs on RV64E (only 16 GP registers).
-
 fn mac(acc: u64, a: u64, b: u64, carry: u64) -> (u64, u64) {
     let r = acc as u128 + (a as u128) * (b as u128) + carry as u128;
     (r as u64, (r >> 64) as u64)
 }
 
 /// Montgomery multiplication: computes (a * b) / R mod P using CIOS.
-/// Uses #[inline(never)] mac() to isolate each u128 op from LLVM's optimizer.
 fn mont_mul(a: &[u64; 4], b: &[u64; 4]) -> [u64; 4] {
     let mut t0: u64 = 0;
     let mut t1: u64 = 0;

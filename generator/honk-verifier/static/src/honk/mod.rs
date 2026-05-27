@@ -10,7 +10,6 @@
 ///
 /// `fr` is custom BN254 scalar field arithmetic (no audited no_std library
 /// exists for PolkaVM). `g1` delegates EC operations to EVM precompiles.
-
 pub mod fr;
 pub mod fr_utils;
 pub mod g1;

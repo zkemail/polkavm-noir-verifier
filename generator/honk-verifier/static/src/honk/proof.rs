@@ -9,9 +9,9 @@
 /// Constants CONST_PROOF_SIZE_LOG_N=28 and NUMBER_OF_ENTITIES=40 are
 /// fixed for all UltraHonk circuits (defined in the Barretenberg prover).
 extern crate alloc;
-use alloc::boxed::Box;
-use alloc::alloc::{alloc_zeroed, Layout};
 use super::fr::Fr;
+use alloc::alloc::{alloc_zeroed, Layout};
+use alloc::boxed::Box;
 
 pub const CONST_PROOF_SIZE_LOG_N: usize = 28;
 pub const NUMBER_OF_ENTITIES: usize = 40;
@@ -19,23 +19,12 @@ pub const BATCHED_RELATION_PARTIAL_LENGTH: usize = 8;
 
 /// G1 proof point in split encoding.
 /// x = x_0 | (x_1 << 136),  y = y_0 | (y_1 << 136)
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct G1ProofPoint {
     pub x_0: [u8; 32],
     pub x_1: [u8; 32],
     pub y_0: [u8; 32],
     pub y_1: [u8; 32],
-}
-
-impl Default for G1ProofPoint {
-    fn default() -> Self {
-        G1ProofPoint {
-            x_0: [0u8; 32],
-            x_1: [0u8; 32],
-            y_0: [0u8; 32],
-            y_1: [0u8; 32],
-        }
-    }
 }
 
 pub struct Proof {

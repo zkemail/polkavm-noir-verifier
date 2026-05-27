@@ -297,10 +297,8 @@ fn accumulate_auxiliary(
 
     let limb_accumulator_identity = (limb_accumulator_1 + limb_accumulator_2) * w(p, Q_O);
 
-    let memory_record_check = {
-        let v = w(p, W_O) * rp.eta_three + w(p, W_R) * rp.eta_two + w(p, W_L) * rp.eta + w(p, Q_C);
-        v
-    };
+    let memory_record_check =
+        w(p, W_O) * rp.eta_three + w(p, W_R) * rp.eta_two + w(p, W_L) * rp.eta + w(p, Q_C);
     let partial_record_check = memory_record_check;
     let memory_record_check = memory_record_check - w(p, W_4);
 

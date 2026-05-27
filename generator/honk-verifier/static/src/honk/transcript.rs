@@ -9,16 +9,14 @@
 ///
 /// Uses streaming keccak (tiny-keccak) to avoid heap allocations.
 extern crate alloc;
-use alloc::boxed::Box;
 use alloc::alloc::{alloc_zeroed, Layout};
+use alloc::boxed::Box;
 
 use tiny_keccak::{Hasher, Keccak};
 
 use super::fr::Fr;
 use super::fr_utils::{fr_to_scalar, split_challenge};
-use super::proof::{
-    Proof, CONST_PROOF_SIZE_LOG_N,
-};
+use super::proof::{Proof, CONST_PROOF_SIZE_LOG_N};
 
 pub const NUMBER_OF_ALPHAS: usize = 25;
 
@@ -103,12 +101,18 @@ pub fn generate_transcript(
         for pi in public_inputs {
             h.update(pi);
         }
-        h.update(&proof.w1.x_0); h.update(&proof.w1.x_1);
-        h.update(&proof.w1.y_0); h.update(&proof.w1.y_1);
-        h.update(&proof.w2.x_0); h.update(&proof.w2.x_1);
-        h.update(&proof.w2.y_0); h.update(&proof.w2.y_1);
-        h.update(&proof.w3.x_0); h.update(&proof.w3.x_1);
-        h.update(&proof.w3.y_0); h.update(&proof.w3.y_1);
+        h.update(&proof.w1.x_0);
+        h.update(&proof.w1.x_1);
+        h.update(&proof.w1.y_0);
+        h.update(&proof.w1.y_1);
+        h.update(&proof.w2.x_0);
+        h.update(&proof.w2.x_1);
+        h.update(&proof.w2.y_0);
+        h.update(&proof.w2.y_1);
+        h.update(&proof.w3.x_0);
+        h.update(&proof.w3.x_1);
+        h.update(&proof.w3.y_0);
+        h.update(&proof.w3.y_1);
         let mut out = [0u8; 32];
         h.finalize(&mut out);
         Fr::from_be_bytes(&out)
@@ -189,7 +193,10 @@ pub fn generate_transcript(
     // Use a stack buffer instead of allocating a Vec per round.
     let mut sumcheck_u_challenges = [Fr::zero(); CONST_PROOF_SIZE_LOG_N];
     let mut uc_buf = [0u8; 9 * 32]; // prev + 8 univariate elements
-    for (sc_dst, univariates) in sumcheck_u_challenges.iter_mut().zip(proof.sumcheck_univariates.iter()) {
+    for (sc_dst, univariates) in sumcheck_u_challenges
+        .iter_mut()
+        .zip(proof.sumcheck_univariates.iter())
+    {
         uc_buf[0..32].copy_from_slice(&fr_to_scalar(prev));
         for (chunk, elem) in uc_buf[32..].chunks_mut(32).zip(univariates.iter()) {
             chunk.copy_from_slice(&fr_to_scalar(*elem));

@@ -9,10 +9,7 @@ fn check_sum(round_univariate: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH], round_tar
     round_univariate[0] + round_univariate[1] == round_target
 }
 
-fn compute_next_target_sum(
-    u: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH],
-    challenge: Fr,
-) -> Fr {
+fn compute_next_target_sum(u: &[Fr; BATCHED_RELATION_PARTIAL_LENGTH], challenge: Fr) -> Fr {
     let d = &BARYCENTRIC_DENOMS;
     let c0 = challenge;
     let c1 = challenge - Fr::ONE;
@@ -54,7 +51,7 @@ pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 
     let mut round_target = Fr::zero();
     let mut pow_partial_evaluation = Fr::one();
 
-{{SUMCHECK_ROUNDS}}
+    {{SUMCHECK_ROUNDS}}
 
     let grand_honk_relation_sum = accumulate_relation_evaluations(
         &proof.sumcheck_evaluations,
@@ -63,7 +60,11 @@ pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 
         pow_partial_evaluation,
     );
 
-    if grand_honk_relation_sum != round_target { 200 } else { 0 }
+    if grand_honk_relation_sum != round_target {
+        200
+    } else {
+        0
+    }
 }
 
 pub fn verify_sumcheck(proof: &Proof, t: &Transcript, log_n: usize) -> bool {

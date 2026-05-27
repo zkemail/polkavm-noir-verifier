@@ -88,6 +88,10 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
     let mut batching_challenge = Fr::one();
     let mut batched_evaluation = Fr::zero();
 
+    // Indexed loops kept intentionally — the body needs `scalars[i]` (a `Vec`)
+    // and `proof.sumcheck_evaluations[i - 1]` (a fixed-size array) in lock-step,
+    // which `enumerate()` can't express cleanly without zip. Measured hot path.
+    #[allow(clippy::needless_range_loop)]
     for i in 1..=NUMBER_UNSHIFTED {
         scalars[i] = -(unshifted_scalar * batching_challenge);
         batched_evaluation =
@@ -95,6 +99,7 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
         batching_challenge = batching_challenge * t.rho;
     }
 
+    #[allow(clippy::needless_range_loop)]
     for i in NUMBER_UNSHIFTED + 1..=NUMBER_OF_ENTITIES {
         scalars[i] = -(shifted_scalar * batching_challenge);
         batched_evaluation =

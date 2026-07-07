@@ -2,8 +2,9 @@
 # Run verification tests against a deployed contract.
 #
 # Usage:
-#   ./scripts/test.sh                                          # uses fixtures/noir-circuit/target
-#   ./scripts/test.sh /path/to/proof /path/to/public_inputs    # custom paths
+#   ./scripts/test.sh                                                              # fixtures + fixtures contract
+#   ./scripts/test.sh /path/to/proof /path/to/public_inputs                        # custom proof, fixtures contract
+#   ./scripts/test.sh /path/to/proof /path/to/public_inputs /path/to/contract_dir  # custom proof + contract
 #
 # Requires: cast (foundry)
 
@@ -11,11 +12,11 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONTRACT_DIR="$REPO_ROOT/contracts/honk-verifier"
 RPC_URL="https://eth-rpc-testnet.polkadot.io/"
 
 PROOF_PATH="${1:-$REPO_ROOT/fixtures/noir-circuit/target/proof}"
 PUB_INPUTS_PATH="${2:-$REPO_ROOT/fixtures/noir-circuit/target/public_inputs}"
+CONTRACT_DIR="${3:-$REPO_ROOT/contracts/honk-verifier}"
 
 if ! command -v cast &> /dev/null; then
   echo "Error: 'cast' not found. Install foundry: https://getfoundry.sh"

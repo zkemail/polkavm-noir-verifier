@@ -36,11 +36,22 @@ async function main() {
   console.log(`Tx: ${tx.hash}`);
   const receipt = await tx.wait();
   const contractAddress = receipt!.contractAddress!;
+  const deployGasUsed = receipt!.gasUsed.toString();
   console.log(`Contract deployed: ${contractAddress}`);
+  console.log(`Deploy gas: ${deployGasUsed}`);
 
   fs.writeFileSync(
     path.join(ROOT, 'deployment.json'),
-    JSON.stringify({ address: contractAddress, timestamp: new Date().toISOString() }, null, 2)
+    JSON.stringify(
+      {
+        address: contractAddress,
+        txHash: tx.hash,
+        deployGasUsed,
+        timestamp: new Date().toISOString(),
+      },
+      null,
+      2,
+    )
   );
   console.log('Saved to deployment.json');
 }

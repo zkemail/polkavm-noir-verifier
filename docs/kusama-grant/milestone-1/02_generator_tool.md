@@ -18,10 +18,10 @@ Ran the full pipeline end-to-end against two circuit shapes at opposite ends of 
 
 | Circuit | `LOG_N` | Public inputs | Command | Result |
 | --- | ---: | ---: | --- | --- |
-| `fixtures/noir-circuit` (`assert x != y`) | 5 | 1 | `nargo execute && bb prove/write_vk/write_solidity_verifier && ./scripts/generate.sh` | Parsed correctly (`N=32, LOG_N=5, PUBLIC_INPUTS=1`, 27 G1 points found), built, linked. `honk_verifier.polkavm`: 50,970 bytes. |
-| `fixtures/zkemail` (Twitter-linking circuit, 468,002 gates) | 19 | 155 | `./scripts/generate.sh <path>/fixtures/zkemail/target/HonkVerifier.sol <out>` | Built, linked. `honk_verifier.polkavm`: **62,680 bytes** - byte-for-byte identical to the figure independently measured and recorded during the original (pre-grant) research. |
+| `fixtures/noir-circuit` (`assert x != y`) | 5 | 1 | `nargo execute && bb prove/write_vk/write_solidity_verifier && ./scripts/generate.sh` | Parsed correctly (`N=32, LOG_N=5, PUBLIC_INPUTS=1`, 27 G1 points found), built, linked. `honk_verifier.polkavm`: 50,616 bytes. |
+| `fixtures/zkemail` (Twitter-linking circuit, 468,002 gates) | 19 | 155 | `./scripts/generate.sh <path>/fixtures/zkemail/target/HonkVerifier.sol <out>` | Built, linked. `honk_verifier.polkavm`: **59,743 bytes**. |
 
-The zkemail-circuit match is a real independent reproduction: the binary was rebuilt from source on a freshly cloned, history-cleaned checkout of this repo, using the committed `HonkVerifier.sol` as input, and produced the exact same byte count as the original measurement - confirming the generator's output is deterministic and that nothing was lost or altered in porting the code.
+Both figures reflect the current sumcheck implementation (a runtime `for` loop, not per-circuit generator-unrolled code - see [`01_planning_research.md`](./01_planning_research.md)), which produces a smaller binary than the originally measured, pre-grant figures (50,970 / 62,680 bytes for the same two circuits) while passing the same equivalence checks - see [`06_automated_test_suite_ci.md`](./06_automated_test_suite_ci.md). Rebuilding either circuit from source on a freshly cloned, history-cleaned checkout of this repo reproduces the same byte count every time, confirming the generator's output is deterministic.
 
 Both runs used `bb`'s own verifier to independently confirm the source proof was valid before generating the Rust verifier from it (`bb verify` → `Proof verified successfully`), so the generated verifier's correctness can be checked against a second, independent implementation, not just against itself.
 

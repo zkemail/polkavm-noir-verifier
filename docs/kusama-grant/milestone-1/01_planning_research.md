@@ -60,9 +60,7 @@ Once the translation approach was settled, the generator's own design followed d
 - Shplemini/KZG batch opening (`shplemini.rs`)
 - Fiat-Shamir transcript (`transcript.rs`)
 
-The generator parses the circuit-specific constants and G1 points out of `HonkVerifier.sol` via regex, templates three circuit-specific files (`vk.rs`, `main.rs`, `sumcheck.rs` - the sumcheck rounds are unrolled per `LOG_N` rather than a runtime loop, a deliberate choice documented below), and copies the generic modules verbatim. This is the same structure the shipped `generator/` still uses.
-
-One implementation detail from this period is worth recording because it shaped a real design constraint: index-based loop accumulation was found to be unreliable on this target during early debugging (see the two commits that manually unrolled a loop into explicit 8-term arithmetic - [`3d2290b`](https://github.com/zkemail/polkavm-noir-verifier/commit/3d2290b) and [`f4d69a0`](https://github.com/zkemail/polkavm-noir-verifier/commit/f4d69a0), both 2026-04-20). That's why the sumcheck rounds are generated as explicit unrolled code per `LOG_N` rather than a Rust `for` loop over rounds - it's a direct consequence of this finding, not a stylistic choice.
+The generator parses the circuit-specific constants and G1 points out of `HonkVerifier.sol` via regex, templates three circuit-specific files (`vk.rs`, `main.rs`, `sumcheck.rs`), and copies the generic modules verbatim. This is the same structure the shipped `generator/` still uses.
 
 **Sources:**
 - [`6d59266`](https://github.com/zkemail/polkavm-noir-verifier/commit/6d59266) (2026-04-21) - generator design plan.

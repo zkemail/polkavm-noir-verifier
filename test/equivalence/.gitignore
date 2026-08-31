@@ -1,0 +1,6 @@
+bin/dev-node
+bin/eth-rpc
+solidity-ref/out/
+solidity-ref/cache/
+solidity-ref/src/HonkVerifier.sol
+.tmp-contract/

@@ -47,7 +47,7 @@ fn partially_evaluate_pow(gate_challenge: Fr, current_evaluation: Fr, round_chal
     current_evaluation * univariate_eval
 }
 
-pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, _log_n: usize) -> u8 {
+pub fn verify_sumcheck_diag(proof: &Proof, t: &Transcript, log_n: usize) -> u8 {
     let mut round_target = Fr::zero();
     let mut pow_partial_evaluation = Fr::one();
 

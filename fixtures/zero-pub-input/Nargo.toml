@@ -1,0 +1,6 @@
+[package]
+name = "zero_pub_input"
+type = "bin"
+authors = [""]
+
+[dependencies]

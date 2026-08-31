@@ -1,0 +1,6 @@
+[package]
+name = "multi_pub_input"
+type = "bin"
+authors = [""]
+
+[dependencies]

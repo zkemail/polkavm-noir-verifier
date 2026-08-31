@@ -54,25 +54,22 @@ function buildPubInputParsing(numPub: number): string {
   return lines.join('\n');
 }
 
-function buildSumcheckRounds(logN: number): string {
+function buildSumcheckRounds(): string {
   // The template placeholder `{{SUMCHECK_ROUNDS}}` lives at column 4, so the
   // first line of our output is auto-indented by 4 spaces; subsequent lines
   // must supply their own indent. Body is shaped to be rustfmt-clean.
-  const rounds: string[] = [];
-  for (let i = 0; i < logN; i++) {
-    rounds.push(`// Round ${i}
-    {
-        let u = &proof.sumcheck_univariates[${i}];
+  // A runtime loop over `log_n` - same logic for every circuit, so no
+  // per-circuit unrolling is needed here.
+  return `for i in 0..log_n {
+        let u = &proof.sumcheck_univariates[i];
         if !check_sum(u, round_target) {
-            return ${100 + i};
+            return 100 + i as u8;
         }
-        let ch = t.sumcheck_u_challenges[${i}];
+        let ch = t.sumcheck_u_challenges[i];
         round_target = compute_next_target_sum(u, ch);
         pow_partial_evaluation =
-            partially_evaluate_pow(t.gate_challenges[${i}], pow_partial_evaluation, ch);
-    }`);
-  }
-  return rounds.join('\n    ');
+            partially_evaluate_pow(t.gate_challenges[i], pow_partial_evaluation, ch);
+    }`;
 }
 
 // --- Main generate function ---
@@ -118,7 +115,7 @@ export function generate(solPath: string, outDir: string, build: boolean): void 
   console.log('Generating sumcheck.rs...');
   const sumcheckTmpl = fs.readFileSync(path.join(templatesDir, 'sumcheck.rs.tmpl'), 'utf8');
   fs.writeFileSync(path.join(srcDir, 'sumcheck.rs'), fillTemplate(sumcheckTmpl, {
-    SUMCHECK_ROUNDS: buildSumcheckRounds(parsed.LOG_N),
+    SUMCHECK_ROUNDS: buildSumcheckRounds(),
   }));
 
   console.log(`\nDone! Output directory: ${outDir}`);

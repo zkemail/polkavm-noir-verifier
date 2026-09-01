@@ -30,6 +30,8 @@ All 5 shapes pass all 5 test vectors (25/25) run locally against the two local d
 
 [`.github/workflows/equivalence-tests.yml`](../../../.github/workflows/equivalence-tests.yml) runs this on every push to `main` and every pull request: installs `nargo`, `bb`, Foundry, and the pinned Rust nightly; downloads and caches the local PVM devnet binaries; regenerates proof artifacts for the 4 small fixtures from source (`fixtures/zkemail`'s are pre-committed, since it's a real production circuit, not trivially regeneratable); and runs `test/equivalence/run.sh` across all 5 shapes, failing the job on any mismatch.
 
+A real GitHub Actions run surfaced a devnet-startup race condition: a fixed `sleep` before checking readiness raced `dev-node`/`eth-rpc`'s actual startup time. Fixed with a polling loop. [Full green run](https://github.com/zkemail/polkavm-noir-verifier/actions/runs/33523468564), **25/25 equivalence checks** (5 test vectors x 5 circuit shapes) on real GitHub-hosted infrastructure.
+
 ## Reproduce
 
 ```bash

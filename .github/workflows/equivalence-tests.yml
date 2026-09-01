@@ -66,13 +66,32 @@ jobs:
       - name: Start local devnets
         run: |
           chmod +x test/equivalence/bin/dev-node test/equivalence/bin/eth-rpc
+
+          wait_for_rpc() {
+            local url="$1" name="$2" logs="$3"
+            for i in $(seq 1 60); do
+              if curl -sf -X POST "$url" -H "Content-Type: application/json" \
+                   -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' >/dev/null 2>&1; then
+                echo "$name ready after ${i}s"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "$name did not become ready within 60s"
+            cat $logs
+            exit 1
+          }
+
           ./test/equivalence/bin/dev-node --dev --rpc-port 8001 > /tmp/dev-node.log 2>&1 &
-          sleep 5
           ./test/equivalence/bin/eth-rpc --dev --node-rpc-url=ws://127.0.0.1:8001 --rpc-port 8546 > /tmp/eth-rpc.log 2>&1 &
           anvil --port 8547 > /tmp/anvil.log 2>&1 &
-          sleep 5
-          curl -sf -X POST http://127.0.0.1:8546 -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' || (cat /tmp/dev-node.log /tmp/eth-rpc.log && exit 1)
-          curl -sf -X POST http://127.0.0.1:8547 -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' || (cat /tmp/anvil.log && exit 1)
+
+          # dev-node's own RPC comes up in ~8s locally, then eth-rpc needs
+          # further time to connect to it before eth-rpc's own RPC is ready -
+          # a fixed sleep undercounts this on a colder/busier runner, so poll
+          # instead of guessing a duration.
+          wait_for_rpc http://127.0.0.1:8546 "PVM devnet (dev-node/eth-rpc)" "/tmp/dev-node.log /tmp/eth-rpc.log"
+          wait_for_rpc http://127.0.0.1:8547 "EVM devnet (anvil)" "/tmp/anvil.log"
 
       - name: Generate proof artifacts for every circuit shape
         run: |

@@ -1,0 +1,6 @@
+[package]
+name = "huge_pub_input"
+type = "bin"
+authors = [""]
+
+[dependencies]

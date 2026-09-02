@@ -36,7 +36,9 @@ Call with `0xea50d0e4` selector. Returns `0x01` on success. On failure it revert
 │   ├── sumcheck.rs           # Sumcheck rounds (generated, circuit-specific)
 │   ├── vk.rs                 # Verification key (generated, circuit-specific)
 │   └── honk/                 # Generic UltraHonk modules
+│       ├── mod.rs            # Module declarations
 │       ├── fr.rs             # BN254 scalar field arithmetic
+│       ├── fr_utils.rs       # Split-point Fq decoding, Fr/Fq byte helpers
 │       ├── g1.rs             # EC precompile wrappers (EIP-196/197)
 │       ├── proof.rs          # Proof deserialization
 │       ├── relations.rs      # 26 sub-relation evaluations

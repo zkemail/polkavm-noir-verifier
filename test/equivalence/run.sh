@@ -24,6 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 CIRCUIT_DIR="${1:?Usage: ./run.sh <circuit_dir>}"
+CIRCUIT_DIR="$(cd "$CIRCUIT_DIR" && pwd)"
 SOL_PATH="$CIRCUIT_DIR/target/HonkVerifier.sol"
 PROOF_PATH="$CIRCUIT_DIR/target/proof"
 PUB_INPUTS_PATH="$CIRCUIT_DIR/target/public_inputs"

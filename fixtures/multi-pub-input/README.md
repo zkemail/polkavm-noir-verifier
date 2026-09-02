@@ -2,8 +2,9 @@
 
 Circuit-shape matrix entry between the 1-public-input and 155-public-input extremes: `secret + a + b + c + d == sum`, 5 public inputs.
 
-- 5 public inputs (`a`, `b`, `c`, `d`, `sum`)
-- Circuit size: N=32, LOG_N=5
+- Gate count: 18
+- Public inputs: 5
+- `LOG_N`: 5
 
 ## Generate proof artifacts
 

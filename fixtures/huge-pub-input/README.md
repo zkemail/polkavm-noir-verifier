@@ -2,10 +2,11 @@
 
 Circuit-shape matrix entry stress-testing public-input count far beyond the production circuit: sums 1000 field elements against a target, all public.
 
-- 1,001 public inputs (1000-element array + the sum) - vs. 155 for the zkemail production circuit
-- Circuit size: N=512, LOG_N=11 (the 1000 additions themselves cost almost nothing in ACIR - addition is linear - the constraint count comes from array handling and the final assert)
+- Gate count: 350
+- Public inputs: 1,001
+- `LOG_N`: 11
 
-Deployed and verified on both the local devnet and real Paseo Asset Hub - deploy gas 2,762,154 on Paseo, no size-related deployment issue despite the largest generated binary in the matrix (113,127 bytes, versus 50-60KB for every other shape - direct evidence of the per-public-input unrolling cost in `buildPubInputParsing`).
+Largest generated binary in the matrix (113,127 bytes, versus 50-60KB for every other shape). The size comes from `buildPubInputParsing` in `generator/honk-verifier/generate.ts`, which generates one explicit `copy_from_slice` line per public input rather than a runtime loop.
 
 ## Generate proof artifacts
 

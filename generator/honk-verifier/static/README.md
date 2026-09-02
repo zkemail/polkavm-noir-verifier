@@ -26,7 +26,7 @@ interface IHonkVerifier {
 }
 ```
 
-Call with `0xea50d0e4` selector. Returns `0x01` (valid) or `0x00` (invalid).
+Call with `0xea50d0e4` selector. Returns `0x01` on success. On failure it reverts (it does not return `0x00`) with a 4-byte custom-error selector - `ProofLengthWrong()`, `PublicInputsLengthWrong()`, `SumcheckFailed()`, or `ShpleminiFailed()` - matching the REVM-compiled Solidity reference's own custom errors byte-for-byte.
 
 ## Structure
 

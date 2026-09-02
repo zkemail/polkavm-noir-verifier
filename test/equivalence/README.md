@@ -28,6 +28,11 @@ Example, using this repo's fixtures:
 
 ```bash
 ./run.sh ../../fixtures/noir-circuit
+./run.sh ../../fixtures/zero-pub-input
+./run.sh ../../fixtures/multi-pub-input
+./run.sh ../../fixtures/large-circuit
+./run.sh ../../fixtures/huge-pub-input
+./run.sh ../../fixtures/huge-circuit
 ./run.sh ../../fixtures/zkemail
 ```
 

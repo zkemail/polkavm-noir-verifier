@@ -95,7 +95,7 @@ jobs:
 
       - name: Generate proof artifacts for every circuit shape
         run: |
-          for dir in fixtures/noir-circuit fixtures/zero-pub-input fixtures/multi-pub-input fixtures/large-circuit; do
+          for dir in fixtures/noir-circuit fixtures/zero-pub-input fixtures/multi-pub-input fixtures/large-circuit fixtures/huge-pub-input fixtures/huge-circuit; do
             (
               cd "$dir"
               nargo execute
@@ -112,7 +112,7 @@ jobs:
       - name: Run equivalence tests across the circuit-shape matrix
         run: |
           set -e
-          for dir in fixtures/noir-circuit fixtures/zero-pub-input fixtures/multi-pub-input fixtures/large-circuit fixtures/zkemail; do
+          for dir in fixtures/noir-circuit fixtures/zero-pub-input fixtures/multi-pub-input fixtures/large-circuit fixtures/huge-pub-input fixtures/huge-circuit fixtures/zkemail; do
             echo "::group::$dir"
             ./test/equivalence/run.sh "$(pwd)/$dir"
             echo "::endgroup::"

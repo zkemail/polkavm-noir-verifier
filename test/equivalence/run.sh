@@ -55,10 +55,33 @@ echo "== [$CIRCUIT_DIR] Generating, building, and deploying Rust/PolkaVM verifie
 OUT_DIR="$SCRIPT_DIR/.tmp-contract"
 rm -rf "$OUT_DIR"
 (cd "$REPO_ROOT/generator" && npx ts-node generate-verifier.ts honk --sol "$SOL_PATH" --out "$OUT_DIR" --build) > /dev/null
-PVM_BYTECODE="0x$(xxd -p -c0 "$OUT_DIR/honk_verifier.polkavm")"
-# No --gas-limit: pallet-revive's gas units are a different scale than EVM;
-# estimation handles it correctly, a hardcoded EVM-sized limit doesn't.
-PVM_ADDRESS=$(cast send --rpc-url "$PVM_RPC" --unlocked --from "$PVM_DEV_ADDR" --create "$PVM_BYTECODE" --json | jq -r '.contractAddress')
+# Deploy via raw JSON-RPC (eth_sendTransaction, unlocked account) reading the
+# bytecode from disk, rather than `cast send --create <hex>`: some generated
+# binaries exceed Linux's ~128KB single-argument limit (MAX_ARG_STRLEN) once
+# hex-encoded, which `cast` has no file-input option for and fails with
+# "Argument list too long" - confirmed on a real CI run with a 113KB binary.
+# --data @file for curl and reading the file directly in Python both avoid
+# argv entirely, so this has no size ceiling.
+DEPLOY_REQ="$SCRIPT_DIR/.tmp-deploy-req.json"
+python3 -c "
+import json
+with open('$OUT_DIR/honk_verifier.polkavm', 'rb') as f:
+    bytecode = '0x' + f.read().hex()
+req = {'jsonrpc': '2.0', 'method': 'eth_sendTransaction', 'params': [{'from': '$PVM_DEV_ADDR', 'data': bytecode}], 'id': 1}
+json.dump(req, open('$DEPLOY_REQ', 'w'))
+"
+TX_HASH=$(curl -s -X POST "$PVM_RPC" -H "Content-Type: application/json" --data @"$DEPLOY_REQ" | jq -r '.result')
+PVM_ADDRESS=""
+for i in $(seq 1 30); do
+  RECEIPT=$(curl -s -X POST "$PVM_RPC" -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$TX_HASH\"],\"id\":1}")
+  PVM_ADDRESS=$(echo "$RECEIPT" | jq -r '.result.contractAddress // empty')
+  [ -n "$PVM_ADDRESS" ] && break
+  sleep 1
+done
+if [ -z "$PVM_ADDRESS" ]; then
+  echo "  PVM deploy did not confirm in time. Last receipt: $RECEIPT"
+  exit 1
+fi
 echo "  PVM (native Rust) deployed: $PVM_ADDRESS"
 
 PROOF_HEX="0x$(xxd -p -c0 "$PROOF_PATH")"

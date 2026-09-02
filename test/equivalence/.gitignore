@@ -4,3 +4,4 @@ solidity-ref/out/
 solidity-ref/cache/
 solidity-ref/src/HonkVerifier.sol
 .tmp-contract/
+.tmp-deploy-req.json

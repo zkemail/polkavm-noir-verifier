@@ -42,6 +42,7 @@ Five test vectors per circuit: a valid proof, a wrong public input, and three
 corrupted-byte variants (matching `scripts/test.sh`'s existing negative cases).
 For each, both deployed contracts must agree - either both accept, or both
 revert with the same 4-byte custom-error selector (EVM and PVM differ in
-revert-message formatting, but the selector is expected to match; see
-`docs/kusama-grant/milestone-1/03_native_verifier_runtime.md`'s note on
-REVM-parity work).
+revert-message formatting, but the selector is expected to match: the native
+runtime deliberately emits the same selectors as the REVM-compiled Solidity
+reference - `ProofLengthWrong`, `PublicInputsLengthWrong`, `SumcheckFailed`,
+`ShpleminiFailed` - this was engineered and verified, not incidental).

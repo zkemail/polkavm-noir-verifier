@@ -4,9 +4,9 @@ Real-world Noir circuit from `zkemail/ens-contracts:test/fixtures/linkHandleComm
 Verifies a zkEmail proof that links a Twitter/X handle to an email
 address, with regex-based extraction of sender domain and handle.
 
-- 155 public inputs
-- LOG_N = 19, N = 524,288 (domain size)
-- Actual circuit size: **468,002 gates** (run `bb gates -b target/zkemail/twitter@v1.json` to verify)
+- Gate count: 468,002 (run `bb gates -b target/zkemail/twitter@v1.json` to verify)
+- Public inputs: 155
+- `LOG_N`: 19
 
 ## Generate proof artifacts
 

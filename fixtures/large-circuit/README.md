@@ -2,8 +2,9 @@
 
 Circuit-shape matrix entry with a distinct `LOG_N` from every other fixture: 400 chained field multiplications, result exposed as a public return value so the ACIR optimizer can't eliminate it.
 
-- 1 public input (the computed return value)
-- Circuit size: N=1024, LOG_N=10 (vs. LOG_N=5 for the other small fixtures and LOG_N=19 for zkemail)
+- Gate count: 815
+- Public inputs: 1
+- `LOG_N`: 10
 
 ## Generate proof artifacts
 

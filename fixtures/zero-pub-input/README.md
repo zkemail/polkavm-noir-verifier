@@ -2,8 +2,9 @@
 
 Circuit-shape edge case for the equivalence test matrix: no public inputs at all (`assert(secret != 0)`, `secret` private).
 
-- 0 public inputs
-- Circuit size: N=32, LOG_N=5
+- Gate count: 17
+- Public inputs: 0
+- `LOG_N`: 5
 
 ## Generate proof artifacts
 

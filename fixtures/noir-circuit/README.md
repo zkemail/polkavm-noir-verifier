@@ -2,8 +2,9 @@
 
 Simple Noir circuit for testing the verifier generator: `assert(x != y)`.
 
-- 1 public input (`y`)
-- Circuit size: N=32, LOG_N=5
+- Gate count: 18
+- Public inputs: 1
+- `LOG_N`: 5
 
 ## Generate proof artifacts
 

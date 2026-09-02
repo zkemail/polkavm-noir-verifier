@@ -95,19 +95,20 @@ jobs:
 
       - name: Generate proof artifacts for every circuit shape
         run: |
-          for dir in fixtures/noir-circuit fixtures/zero-pub-input fixtures/multi-pub-input fixtures/large-circuit fixtures/huge-pub-input fixtures/huge-circuit; do
+          for dir in fixtures/noir-circuit fixtures/zero-pub-input fixtures/multi-pub-input fixtures/large-circuit fixtures/huge-pub-input fixtures/huge-circuit fixtures/zkemail; do
             (
               cd "$dir"
               nargo execute
-              BYTECODE=$(ls target/*.json)
-              WITNESS=$(ls target/*.gz)
+              # find, not a flat glob: fixtures/zkemail's package name
+              # ("zkemail/twitter@v1") makes nargo nest output one level
+              # deeper (target/zkemail/twitter@v1.json) instead of flat.
+              BYTECODE=$(find target -name '*.json')
+              WITNESS=$(find target -name '*.gz')
               bb prove --bytecode_path "$BYTECODE" --witness_path "$WITNESS" --output_path ./target --oracle_hash keccak
               bb write_vk --bytecode_path "$BYTECODE" --output_path ./target --oracle_hash keccak
               bb write_solidity_verifier --vk_path ./target/vk --output_path ./target/HonkVerifier.sol
             )
           done
-          # fixtures/zkemail ships its proof artifacts pre-committed (production
-          # circuit, not trivially regeneratable), used as-is.
 
       - name: Run equivalence tests across the circuit-shape matrix
         run: |

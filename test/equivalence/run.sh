@@ -24,6 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 CIRCUIT_DIR="${1:?Usage: ./run.sh <circuit_dir>}"
+CIRCUIT_DIR="$(cd "$CIRCUIT_DIR" && pwd)"
 SOL_PATH="$CIRCUIT_DIR/target/HonkVerifier.sol"
 PROOF_PATH="$CIRCUIT_DIR/target/proof"
 PUB_INPUTS_PATH="$CIRCUIT_DIR/target/public_inputs"
@@ -55,7 +56,6 @@ echo "== [$CIRCUIT_DIR] Generating, building, and deploying Rust/PolkaVM verifie
 OUT_DIR="$SCRIPT_DIR/.tmp-contract"
 rm -rf "$OUT_DIR"
 (cd "$REPO_ROOT/generator" && npx ts-node generate-verifier.ts honk --sol "$SOL_PATH" --out "$OUT_DIR" --build) > /dev/null
-
 # Deploy via raw JSON-RPC (eth_sendTransaction, unlocked account) reading the
 # bytecode from disk, rather than `cast send --create <hex>`: some generated
 # binaries exceed Linux's ~128KB single-argument limit (MAX_ARG_STRLEN) once
@@ -122,8 +122,9 @@ call_both() {
 
   # Both reverted - compare the 4-byte custom-error selector, not the raw
   # message text (EVM and PVM revert-message formatting differs, but the
-  # selector is the part that's supposed to match - see the REVM-parity work
-  # cited in 03_native_verifier_runtime.md).
+  # selector is the part that's supposed to match: the native runtime
+  # deliberately emits the same selectors as the REVM-compiled Solidity
+  # reference, and that's what's being checked here).
   local evm_selector pvm_selector
   evm_selector=$(echo "$evm_out" | grep -oE '0x[0-9a-fA-F]{8}' | tail -1)
   pvm_selector=$(echo "$pvm_out" | grep -oE '0x[0-9a-fA-F]{8}' | tail -1)

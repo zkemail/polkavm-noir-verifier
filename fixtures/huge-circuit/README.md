@@ -2,10 +2,9 @@
 
 Circuit-shape matrix entry genuinely larger than the production circuit: 550,000 chained field multiplications, result exposed as a public return value so the ACIR optimizer can't eliminate it.
 
-- 1 public input (the computed return value)
-- Circuit size: N=2,097,152, LOG_N=21 (vs. LOG_N=19 for the zkemail production circuit - a different power-of-two bucket, not just a bigger number within the same one)
-
-`nargo execute` takes ~24s and `bb prove` ~21s locally; the generated PolkaVM binary is 50,672 bytes - identical to every other 1-public-input shape regardless of `LOG_N`, confirming binary size no longer depends on circuit size after the sumcheck for-loop fix (see `01_planning_research.md`).
+- Gate count: 1,100,015
+- Public inputs: 1
+- `LOG_N`: 21
 
 ## Generate proof artifacts
 

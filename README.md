@@ -1,5 +1,7 @@
 # UltraHonk Verifier for PolkaVM
 
+[![Equivalence Tests](https://github.com/zkemail/polkavm-noir-verifier/actions/workflows/equivalence-tests.yml/badge.svg)](https://github.com/zkemail/polkavm-noir-verifier/actions/workflows/equivalence-tests.yml)
+
 Generate and deploy UltraHonk ZK proof verifiers as PolkaVM smart contracts on Polkadot Asset Hub.
 
 Given any Noir circuit, this tool produces a complete Rust verifier contract that runs on-chain.
@@ -15,6 +17,18 @@ The generator reads a `HonkVerifier.sol` (produced by Barretenberg's `bb write_s
 - Generic UltraHonk verification modules (transcript, relations, shplemini/KZG)
 - EC operations via EVM precompiles (ecAdd, ecMul, ecPairing)
 - Deploy script
+
+## Requirements
+
+- [Rust](https://rustup.rs/) nightly, pinned to `nightly-2026-04-20` via `generator/honk-verifier/static/rust-toolchain.toml`
+- [polkatool](https://github.com/paritytech/polkavm) **0.25.0** for PolkaVM linking. Install via `cargo install polkatool --version 0.25.0 --locked`. Newer versions emit bytecode Paseo's pallet-revive rejects, so the version is pinned to match the chain's pallet-revive runtime.
+- Node.js 18+ (for generator and deploy scripts)
+- [Foundry](https://getfoundry.sh/) (`cast`) for running tests
+- PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1000))
+
+Only needed if compiling circuits from source:
+- [nargo](https://noir-lang.org/) `1.0.0-beta.5` (install via `noirup --version 1.0.0-beta.5`)
+- [bb](https://github.com/AztecProtocol/barretenberg) (Barretenberg) `v0.84.0` (installed automatically by `bbup` to match the pinned nargo version)
 
 ## Usage
 
@@ -82,38 +96,47 @@ cd ../..
 │           ├── src/honk/           # Generic verification modules
 │           ├── scripts/            # Deploy script
 │           └── interfaces/         # IHonkVerifier.sol
-├── fixtures/
-│   └── noir-circuit/               # Example test circuit
+├── fixtures/                       # Circuit-shape matrix (7 shapes - see "Tested with" below)
+│   ├── noir-circuit/                 # Baseline: 1 public input, LOG_N=5
+│   ├── zero-pub-input/                # Edge case: 0 public inputs
+│   ├── multi-pub-input/               # 5 public inputs
+│   ├── huge-pub-input/                # 1,001 public inputs
+│   ├── large-circuit/                 # LOG_N=10
+│   ├── huge-circuit/                  # LOG_N=21
+│   └── zkemail/                       # Real production circuit: LOG_N=19, 155 public inputs
 ├── scripts/
 │   ├── generate.sh                 # Generate + build verifier
-│   └── test.sh                     # Run verification tests (requires cast)
+│   └── test.sh                     # Run verification tests against a deployed contract (requires cast)
+├── test/equivalence/                # Local-devnet equivalence tests (see test/equivalence/README.md)
+├── .github/workflows/               # CI: runs the equivalence-test matrix on every push/PR
 └── contracts/                      # Generated output (gitignored)
 ```
 
 ## Tested with
 
-- **Simple circuit**: LOG_N=5, 1 public input — verified on Paseo
-- **ZK email circuit** ([zkemail/ens-contracts](https://github.com/zkemail/ens-contracts)): LOG_N=19, 155 public inputs — verified on Paseo
+7 circuit shapes, covering public-input count and circuit size (`LOG_N`) as independent axes:
 
-## Requirements
+| Fixture | Gate count | Public inputs | `LOG_N` |
+| --- | ---: | ---: | ---: |
+| `fixtures/zero-pub-input` | 17 | 0 | 5 |
+| `fixtures/noir-circuit` | 18 | 1 | 5 |
+| `fixtures/multi-pub-input` | 18 | 5 | 5 |
+| `fixtures/huge-pub-input` | 350 | 1,001 | 11 |
+| `fixtures/large-circuit` | 815 | 1 | 10 |
+| `fixtures/huge-circuit` | 1,100,015 | 1 | 21 |
+| `fixtures/zkemail` ([zkemail/ens-contracts](https://github.com/zkemail/ens-contracts), real production circuit) | 468,002 | 155 | 19 |
 
-- [Rust](https://rustup.rs/) nightly — pinned to `nightly-2026-04-20` via `generator/honk-verifier/static/rust-toolchain.toml`
-- [polkatool](https://github.com/paritytech/polkavm) **0.25.0** for PolkaVM linking. Install via `cargo install polkatool --version 0.25.0 --locked`. Newer versions emit bytecode Paseo's pallet-revive rejects — version is pinned to match the chain's pallet-revive runtime.
-- Node.js 18+ (for generator and deploy scripts)
-- [Foundry](https://getfoundry.sh/) (`cast`) for running tests
-- PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1111))
+## Continuous integration
 
-Only needed if compiling circuits from source:
-- [nargo](https://noir-lang.org/) `1.0.0-beta.5` (install via `noirup --version 1.0.0-beta.5`)
-- [bb](https://github.com/AztecProtocol/barretenberg) (Barretenberg) `v0.84.0` (installed automatically by `bbup` to match the pinned nargo version)
+[`.github/workflows/equivalence-tests.yml`](./.github/workflows/equivalence-tests.yml) runs the full equivalence-test matrix above on every push and pull request against a local devnet (no live testnet funds required).
 
 ## Architecture
 
 The verifier translates Aztec/Barretenberg's `HonkVerifier.sol` to Rust for PolkaVM:
 
-- **Sumcheck** (LOG_N rounds) — verifies polynomial identity
-- **Relations** (26 sub-relations) — UltraHonk constraint system
-- **Shplemini** — KZG batch opening via EC precompiles
-- **Transcript** — Fiat-Shamir challenge generation (streaming keccak)
+- **Sumcheck** (LOG_N rounds): verifies polynomial identity
+- **Relations** (26 sub-relations): UltraHonk constraint system
+- **Shplemini**: KZG batch opening via EC precompiles
+- **Transcript**: Fiat-Shamir challenge generation (streaming keccak)
 
-EC operations use EVM precompiles (EIP-196/197) running natively in the Polkadot runtime — much cheaper than pure-Rust implementations inside the VM.
+EC operations use EVM precompiles (EIP-196/197) running natively in the Polkadot runtime, much cheaper than pure-Rust implementations inside the VM.

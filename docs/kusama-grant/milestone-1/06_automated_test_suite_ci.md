@@ -36,7 +36,7 @@ All 7 shapes pass all 5 test vectors (35/35) run locally against the two local d
 
 A real GitHub Actions run surfaced a devnet-startup race condition: a fixed `sleep` before checking readiness raced `dev-node`/`eth-rpc`'s actual startup time. Fixed with a polling loop. [Full green run](https://github.com/zkemail/polkavm-noir-verifier/actions/runs/33523468564), **25/25 equivalence checks** (5 test vectors x 5 circuit shapes) on real GitHub-hosted infrastructure.
 
-The matrix has since grown to 7 shapes (`huge-pub-input`, `huge-circuit` added), both validated locally (5/5 each); the two new shapes have not yet been exercised together with the rest in a single fresh CI run.
+The matrix grew to 7 shapes (`huge-pub-input`, `huge-circuit` added). Pushing the expanded matrix caught a second real CI-only bug: `huge-pub-input`'s 113KB binary hex-encodes to 226KB, and `cast send --create <hex>` passes that as a single argv entry - Linux caps a single argv entry at ~128KB, so the deploy failed with "Argument list too long" (never surfaced locally; macOS enforces no such limit). Fixed by deploying via raw `eth_sendTransaction` JSON-RPC instead. [Full green run](https://github.com/zkemail/polkavm-noir-verifier/actions/runs/33628567922), **35/35 equivalence checks** (5 test vectors x 7 circuit shapes) on real GitHub-hosted infrastructure.
 
 ## Reproduce
 

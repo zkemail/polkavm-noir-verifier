@@ -24,7 +24,7 @@ The generator reads a `HonkVerifier.sol` (produced by Barretenberg's `bb write_s
 - [polkatool](https://github.com/paritytech/polkavm) **0.25.0** for PolkaVM linking. Install via `cargo install polkatool --version 0.25.0 --locked`. Newer versions emit bytecode Paseo's pallet-revive rejects, so the version is pinned to match the chain's pallet-revive runtime.
 - Node.js 18+ (for generator and deploy scripts)
 - [Foundry](https://getfoundry.sh/) (`cast`) for running tests
-- PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1111))
+- PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1000))
 
 Only needed if compiling circuits from source:
 - [nargo](https://noir-lang.org/) `1.0.0-beta.5` (install via `noirup --version 1.0.0-beta.5`)

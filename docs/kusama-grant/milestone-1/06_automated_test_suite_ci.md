@@ -12,19 +12,19 @@ Before this deliverable, the only test tool (`scripts/test.sh`) called a contrac
 
 ## Circuit-shape matrix
 
-Seven fixtures, deliberately designed to cover public-input count and `LOG_N` as two *independent* axes (rather than trying to recover the untracked shapes referenced in earlier internal notes, and rather than just picking bigger/smaller circuits along a single dimension):
+Seven fixtures, deliberately designed to cover public-input count and `LOG_N` as two *independent* axes (rather than trying to recover the untracked shapes referenced in earlier internal notes, and rather than just picking bigger/smaller circuits along a single dimension). Current gate count / public input count / `LOG_N` for every fixture is in the root [`README.md`](../../../README.md#tested-with)'s "Tested with" table - not restated here since it's re-verified by CI on every push and a second hardcoded copy here would only go stale.
 
-| Fixture | Gate count | Public inputs | `LOG_N` | Purpose |
-| --- | ---: | ---: | ---: | --- |
-| `fixtures/zero-pub-input` | 17 | **0** | 5 | Edge case: empty public-input array |
-| `fixtures/noir-circuit` | 18 | 1 | 5 | Baseline |
-| `fixtures/multi-pub-input` | 18 | 5 | 5 | Mid public-input count, small circuit |
-| `fixtures/huge-pub-input` | 350 | **1,001** | 11 | Public-input count far beyond the production circuit's 155 - see below for real-Paseo validation |
-| `fixtures/large-circuit` | 815 | 1 | 10 | Distinct circuit size from the tiny fixtures |
-| `fixtures/huge-circuit` | 1,100,015 | 1 | **21** | Genuinely bigger than the production circuit, and a different power-of-two bucket (`LOG_N=21` vs. `LOG_N=19`), not just a bigger number in the same one |
-| `fixtures/zkemail` | 468,002 | 155 | 19 | Real production circuit - both axes large simultaneously, the one combined case nothing else covers |
+| Fixture | Purpose |
+| --- | --- |
+| `fixtures/zero-pub-input` | Edge case: empty public-input array |
+| `fixtures/noir-circuit` | Baseline |
+| `fixtures/multi-pub-input` | Mid public-input count, small circuit |
+| `fixtures/huge-pub-input` | Public-input count far beyond the production circuit's 155 |
+| `fixtures/large-circuit` | Distinct circuit size from the tiny fixtures |
+| `fixtures/huge-circuit` | Genuinely bigger than the production circuit, and a different power-of-two bucket (`LOG_N=21` vs. `LOG_N=19`), not just a bigger number in the same one |
+| `fixtures/zkemail` | Real production circuit - both axes large simultaneously, the one combined case nothing else covers |
 
-`fixtures/huge-pub-input` was also deployed and exercised for real on Paseo Asset Hub (not just the local devnet), specifically to check whether its unusually large generated binary (113,127 bytes - the biggest in the matrix, direct evidence of the per-public-input unrolling cost in `buildPubInputParsing`, see [`01_planning_research.md`](./01_planning_research.md)) hits any real deployment limit. It doesn't: deploy gas 2,762,154, `verify()` on the real 1001-public-input proof returns `0x01` (success). Worth noting for anyone reading gas numbers off a local devnet: pallet-revive's local dev-node reports gas in a completely different unit scale than the real network (12 trillion locally vs. 2.76 million on real Paseo for the same deploy) - local absolute gas figures aren't directly comparable to real-network costs.
+Real-Paseo deployment coverage across this matrix (beyond `scripts/test.sh`'s existing single-circuit Paseo checks) is Milestone 1's separate "Testnet Deployment & Validation" deliverable, not yet delivered - see that deliverable's evidence doc once it lands rather than treating any figure here as a substitute.
 
 ## Proof it works
 
@@ -32,7 +32,7 @@ All 7 shapes pass all 5 test vectors (35/35) run locally against the two local d
 
 ## CI
 
-[`.github/workflows/equivalence-tests.yml`](../../../.github/workflows/equivalence-tests.yml) runs this on every push to `main` and every pull request: installs `nargo`, `bb`, Foundry, and the pinned Rust nightly; downloads and caches the local PVM devnet binaries; regenerates proof artifacts for the 6 small fixtures from source (`fixtures/zkemail`'s are pre-committed, since it's a real production circuit, not trivially regeneratable); and runs `test/equivalence/run.sh` across all 7 shapes, failing the job on any mismatch.
+[`.github/workflows/equivalence-tests.yml`](../../../.github/workflows/equivalence-tests.yml) runs this on every push to `main` and every pull request: installs `nargo`, `bb`, Foundry, and the pinned Rust nightly; downloads and caches the local PVM devnet binaries; regenerates proof artifacts for all 7 fixtures from source, including `fixtures/zkemail` (its external Noir dependencies are pinned to specific git tags, and a fresh build takes only a few seconds); and runs `test/equivalence/run.sh` across all 7 shapes, failing the job on any mismatch.
 
 A real GitHub Actions run surfaced a devnet-startup race condition: a fixed `sleep` before checking readiness raced `dev-node`/`eth-rpc`'s actual startup time. Fixed with a polling loop. [Full green run](https://github.com/zkemail/polkavm-noir-verifier/actions/runs/33523468564), **25/25 equivalence checks** (5 test vectors x 5 circuit shapes) on real GitHub-hosted infrastructure.
 
@@ -54,6 +54,8 @@ anvil --port 8547 &
 ./run.sh ../../fixtures/zero-pub-input
 ./run.sh ../../fixtures/multi-pub-input
 ./run.sh ../../fixtures/large-circuit
+./run.sh ../../fixtures/huge-pub-input
+./run.sh ../../fixtures/huge-circuit
 ./run.sh ../../fixtures/zkemail
 ```
 

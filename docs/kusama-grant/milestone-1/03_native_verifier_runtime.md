@@ -14,7 +14,7 @@ The generic UltraHonk verification modules, copied unchanged into every generate
 | [`proof.rs`](../../../generator/honk-verifier/static/src/honk/proof.rs) | Proof deserialization |
 | [`relations.rs`](../../../generator/honk-verifier/static/src/honk/relations.rs) | The 26 UltraHonk sub-relations |
 | [`shplemini.rs`](../../../generator/honk-verifier/static/src/honk/shplemini.rs) | Shplemini/KZG batch opening |
-| `vk.rs`, `main.rs`, `sumcheck.rs` (templated) | Circuit-specific verification key, contract entry point, and unrolled sumcheck rounds (see [`01_planning_research.md`](./01_planning_research.md) for why sumcheck is unrolled rather than a runtime loop) |
+| `vk.rs`, `main.rs`, `sumcheck.rs` (templated) | Circuit-specific verification key, contract entry point, and sumcheck rounds - a runtime `for` loop over `LOG_N` ([`buildSumcheckRounds`](../../../generator/honk-verifier/generate.ts) in `generate.ts`), not generator-unrolled per circuit |
 
 **Sized heap allocator:** `main.rs.tmpl` declares `#[global_allocator] static ALLOC: simplealloc::SimpleAlloc<{ {{HEAP_KB}} * 1024 }>`, with `HEAP_KB` computed per-circuit from `NUMBER_OF_PUBLIC_INPUTS` by the generator (`calculateHeapKB` in `generate.ts`), not a fixed constant. `simplealloc` is a bump allocator with no `free` support, adopted deliberately since `verify()` never frees during execution (`7991375`, "Swap picoalloc -> simplealloc (deploy gas -12%, binary -20%)").
 
@@ -30,9 +30,9 @@ The streaming-keccak swap was a deliberate, measured change, not the original im
 
 ## Proof it works
 
-Same build run documented in [`02_generator_tool.md`](./02_generator_tool.md) exercises this runtime directly - the generator's templating step and this runtime's compilation are one pipeline, not separately testable. Both circuit shapes (`LOG_N=5`/1 public input and `LOG_N=19`/155 public inputs) compiled under the pinned `nightly-2026-04-20` toolchain with zero warnings and linked to a valid PolkaVM binary via `polkatool link --strip --min-stack-size 65536`.
+Same build run documented in [`02_generator_tool.md`](./02_generator_tool.md) exercises this runtime directly - the generator's templating step and this runtime's compilation are one pipeline, not separately testable. Both circuit shapes compiled under the pinned `nightly-2026-04-20` toolchain with zero warnings and linked to a valid PolkaVM binary via `polkatool link --strip --min-stack-size 65536`.
 
-The zkemail-circuit binary (59,743 bytes, reflecting the current for-loop-based sumcheck implementation - see [`01_planning_research.md`](./01_planning_research.md)) rebuilding to the same byte count on every clean checkout is direct evidence that this runtime - the actual verification logic, not just the generator's templating - reproduces deterministically from source.
+The zkemail-circuit binary rebuilding to the same byte count on every clean checkout (see [`02_generator_tool.md`](./02_generator_tool.md)) is direct evidence that this runtime - the actual verification logic, not just the generator's templating - reproduces deterministically from source.
 
 ## Reproduce
 

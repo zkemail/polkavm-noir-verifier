@@ -14,16 +14,11 @@ Structure - circuit-specific router in `generate-verifier.ts` (2026-04-22, [`610
 
 ## Proof it works
 
-Ran the full pipeline end-to-end against two circuit shapes at opposite ends of the size range, using the exact toolchain versions pinned in the README (`nargo` 1.0.0-beta.5, `bb` v0.84.0, Rust `nightly-2026-04-20`, `polkatool` 0.25.0):
+Ran the full pipeline end-to-end against two circuit shapes at opposite ends of the size range - `fixtures/noir-circuit` and `fixtures/zkemail` (real production circuit) - using the exact toolchain versions pinned in the root [`README.md`](../../../README.md#requirements). Current gate count / public input count / `LOG_N` for every fixture, including these two, is in that README's "Tested with" table; not restated here since it's re-verified by CI on every push and a second hardcoded copy here would only go stale.
 
-| Circuit | `LOG_N` | Public inputs | Command | Result |
-| --- | ---: | ---: | --- | --- |
-| `fixtures/noir-circuit` (`assert x != y`) | 5 | 1 | `nargo execute && bb prove/write_vk/write_solidity_verifier && ./scripts/generate.sh` | Parsed correctly (`N=32, LOG_N=5, PUBLIC_INPUTS=1`, 27 G1 points found), built, linked. `honk_verifier.polkavm`: 50,616 bytes. |
-| `fixtures/zkemail` (Twitter-linking circuit, 468,002 gates) | 19 | 155 | `./scripts/generate.sh <path>/fixtures/zkemail/target/HonkVerifier.sol <out>` | Built, linked. `honk_verifier.polkavm`: **59,743 bytes**. |
+Both builds parsed correctly (27 G1 points found, matching the UltraHonk verification key structure), built, and linked into a valid PolkaVM binary. `bb`'s own verifier independently confirmed each source proof was valid before generating the Rust verifier from it (`bb verify` → `Proof verified successfully`), so the generated verifier's correctness can be checked against a second, independent implementation, not just against itself.
 
-Both figures reflect the current sumcheck implementation (a runtime `for` loop, not per-circuit generator-unrolled code - see [`01_planning_research.md`](./01_planning_research.md)), which produces a smaller binary than the originally measured, pre-grant figures (50,970 / 62,680 bytes for the same two circuits) while passing the same equivalence checks - see [`06_automated_test_suite_ci.md`](./06_automated_test_suite_ci.md). Rebuilding either circuit from source on a freshly cloned, history-cleaned checkout of this repo reproduces the same byte count every time, confirming the generator's output is deterministic.
-
-Both runs used `bb`'s own verifier to independently confirm the source proof was valid before generating the Rust verifier from it (`bb verify` → `Proof verified successfully`), so the generated verifier's correctness can be checked against a second, independent implementation, not just against itself.
+Rebuilding either circuit from source on a freshly cloned checkout of this repo reproduces the exact same binary byte-for-byte every time - confirming the generator's output is deterministic. This is checked automatically on every push by [`test/equivalence/run.sh`](../../../test/equivalence/run.sh) (see [`06_automated_test_suite_ci.md`](./06_automated_test_suite_ci.md)), not just asserted here.
 
 ## Reproduce
 
@@ -40,9 +35,15 @@ cd ../..
 ls -la contracts/honk-verifier/honk_verifier.polkavm
 ```
 
-For the zkemail circuit (uses the already-committed `HonkVerifier.sol`, no `nargo`/`bb` needed):
+For the zkemail circuit, same shape (its `target/` isn't committed - see `fixtures/zkemail/README.md`):
 
 ```bash
+cd fixtures/zkemail
+nargo execute
+bb prove --bytecode_path ./target/zkemail/twitter@v1.json --witness_path ./target/zkemail/twitter@v1.gz --output_path ./target --oracle_hash keccak
+bb write_vk --bytecode_path ./target/zkemail/twitter@v1.json --output_path ./target --oracle_hash keccak
+bb write_solidity_verifier --vk_path ./target/vk --output_path ./target/HonkVerifier.sol
+cd ../..
 ./scripts/generate.sh "$(pwd)/fixtures/zkemail/target/HonkVerifier.sol" "$(pwd)/contracts/honk-verifier-zkemail"
 ls -la contracts/honk-verifier-zkemail/honk_verifier.polkavm
 ```

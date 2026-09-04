@@ -1,0 +1,54 @@
+{
+  "leg": "EVM",
+  "description": "Same REVM-leg bytecode (identical solc --optimize --optimize-runs 200 build) deployed to Ethereum Sepolia, as the real-mainnet cost baseline.",
+  "chainId": "11155111",
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "measuredAt": "2026-09-04",
+  "note": "Real Ethereum has no code-hash-reuse discount (CODEDEPOSIT charges the same per-byte cost on every deployment regardless of whether identical bytecode exists elsewhere), so no cold/warm distinction applies here.",
+  "results": [
+    {
+      "fixture": "noir-circuit",
+      "op": "deploy",
+      "hash": "0x61e73a6cb4e09b39971385ba22f5f774e8bc8eb6a5ff48fca5211cea478c9f88",
+      "gasUsed": "4718904",
+      "gasPriceWei": "1015998691",
+      "feeGasWei": "4794400286954664",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA"
+    },
+    {
+      "fixture": "noir-circuit",
+      "op": "verify",
+      "hash": "0x0480a47d3f76c7b2dab7c4a8eb3190df19eeaf98071ab39e6d07383096fb844c",
+      "gasUsed": "1826487",
+      "gasPriceWei": "1099924948",
+      "feeGasWei": "2008998618497676",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": null
+    },
+    {
+      "fixture": "zkemail",
+      "op": "deploy",
+      "hash": "0x096a1e1c135761295bfe15ee2faa7d68d88e2e7edeae5a0be85c0fd02b67439a",
+      "gasUsed": "4720172",
+      "gasPriceWei": "1010200704",
+      "feeGasWei": "4768321077401088",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0x60276A3710AD578E8eecF221C8841b86dbfD757b"
+    },
+    {
+      "fixture": "zkemail",
+      "op": "verify",
+      "hash": "0x055770aca78b19836f4802051ca3acdcd9d49d89ab4f7bc07d5e076b38dabaf2",
+      "gasUsed": "2897266",
+      "gasPriceWei": "1085526026",
+      "feeGasWei": "3145057647244916",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": null
+    }
+  ]
+}

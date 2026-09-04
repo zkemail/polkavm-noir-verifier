@@ -1,0 +1,54 @@
+{
+  "leg": "REVM",
+  "description": "HonkVerifier.sol compiled with plain solc --optimize --optimize-runs 200 to standard EVM bytecode, deployed on Paseo and executed via Polkadot Hub's REVM engine.",
+  "chainId": "420420417",
+  "rpc": "https://eth-rpc-testnet.polkadot.io",
+  "measuredAt": "2026-09-04",
+  "note": "Deploy gas here is steady-state (\"warm\") pricing, same code-hash-reuse effect documented in pvm-resolc.json and README.md. Verify gas (76,779 / 103,966) closely matches this project's own earlier historical measurement from before this session (76,668 / 103,948), an independent cross-check on methodology.",
+  "results": [
+    {
+      "fixture": "noir-circuit",
+      "op": "deploy",
+      "hash": "0xbc647c00f9d317fac3119d70aeacf49b06730f48b1c76a65c12a2809b1c0e706",
+      "gasUsed": "495855",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "495855000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0xf07Ad7f066f8fA09899F620C9Ace6FA87c2c3216"
+    },
+    {
+      "fixture": "noir-circuit",
+      "op": "verify",
+      "hash": "0xb1e4cee84dada687a5ba907b46aeb0716f8181746dd5e8afa52407367f0bb1be",
+      "gasUsed": "76779",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "76779000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": null
+    },
+    {
+      "fixture": "zkemail",
+      "op": "deploy",
+      "hash": "0x343bd19f3589933ec661452d86dcef8cb2604e873775b0bb3eaa738bb19cc7a7",
+      "gasUsed": "495914",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "495914000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0x7bF9091bfeF58bd0c217Ce1C75f961D9611e9FD0"
+    },
+    {
+      "fixture": "zkemail",
+      "op": "verify",
+      "hash": "0x4d7bb186e6929c1d0460b92b708c30ccebb9a766a024ba34eed5d486d888748f",
+      "gasUsed": "103966",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "103966000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": null
+    }
+  ]
+}

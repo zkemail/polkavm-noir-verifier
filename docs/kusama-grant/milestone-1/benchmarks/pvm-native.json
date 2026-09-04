@@ -1,0 +1,56 @@
+{
+  "leg": "PVM (native)",
+  "description": "Hand-written Rust verifier, compiled to PVM via rustc + polkatool link (generator/honk-verifier).",
+  "chainId": "420420417",
+  "rpc": "https://eth-rpc-testnet.polkadot.io",
+  "measuredAt": "2026-09-04",
+  "note": "verify() receipts show status=0 despite genuine success: pallet-revive returns a 1-byte (not 32-byte-padded) result for this call shape, which trips receipt status logic. Confirmed genuine via a fresh read-only eth_call returning 0x01 for both fixtures. This bytecode was already deployed on Paseo (via the M1.5 evidence deployment) before this benchmark session began, so deploy gas here reflects steady-state (\"warm\") pricing - see README.md for the cold vs. warm distinction.",
+  "results": [
+    {
+      "fixture": "noir-circuit",
+      "op": "deploy",
+      "hash": "0xb8dd1478559f984fd564a032a50a7e2d86f2353e0da016c1770ca991c3b78f3c",
+      "gasUsed": "728487",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "728487000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0x36d5f780535BCab7556350dD499456C6d833b4c4"
+    },
+    {
+      "fixture": "noir-circuit",
+      "op": "verify",
+      "hash": "0x9f72444489f57741c16c5ef4144dda9104765baa19c965ed71613052ac310b81",
+      "gasUsed": "74371",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "74371000000000000",
+      "status": "success",
+      "receiptStatus": 0,
+      "contractAddress": null,
+      "note": "receipt status=0 but genuinely succeeded (pallet-revive 1-byte return-data quirk), confirmed via read-only eth_call returning 0x01 before this tx"
+    },
+    {
+      "fixture": "zkemail",
+      "op": "deploy",
+      "hash": "0x70a2f6fbbc0a7ff29eb0f4037e4dbe274d066139f92b145e991a3b188c8424c1",
+      "gasUsed": "801745",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "801745000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0x28f0B4dd3bC8F44181e8FcDa4d6f6e6E7b65e90A"
+    },
+    {
+      "fixture": "zkemail",
+      "op": "verify",
+      "hash": "0x3bf6b9128f622855784424dae676ee5fecd9495b2d62f0ebcdd79c744bafbbcb",
+      "gasUsed": "100081",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "100081000000000000",
+      "status": "success",
+      "receiptStatus": 0,
+      "contractAddress": null,
+      "note": "receipt status=0 but genuinely succeeded (pallet-revive 1-byte return-data quirk), confirmed via read-only eth_call returning 0x01 before this tx"
+    }
+  ]
+}

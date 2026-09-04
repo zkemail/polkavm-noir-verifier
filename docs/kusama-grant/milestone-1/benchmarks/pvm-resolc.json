@@ -1,0 +1,58 @@
+{
+  "leg": "PVM (resolc)",
+  "description": "HonkVerifier.sol compiled straight to PVM via resolc v1.4.0 (no optimizer flag available on this version's CLI). Also tried resolc v0.5.0, this project's own polkavm-hardhat-template pin, with its intended optimizer settings (runs: 10000): bytecode nearly doubles in size and is rejected before deployment with StaticMemoryTooLarge, never reaching an on-chain gas figure.",
+  "chainId": "420420417",
+  "rpc": "https://eth-rpc-testnet.polkadot.io",
+  "measuredAt": "2026-09-04",
+  "note": "Deploy gas here is steady-state (\"warm\") pricing: pallet-revive stores contract code once per unique hash and later instantiations reuse it, so redeploying identical bytecode is substantially cheaper than the first-ever deployment of that code (see README.md). Confirmed general to pallet-revive (not PVM-specific) via an identical pattern on the REVM leg. Every verify() attempt genuinely fails OutOfGas, confirmed via raw RPC error for both fixtures.",
+  "results": [
+    {
+      "fixture": "noir-circuit",
+      "op": "deploy",
+      "hash": "0x2c1d3af18c70cbb0555092aa9cb1f633a898a2575969d75719c70266487c6ce9",
+      "gasUsed": "5081613",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "5081613000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0x5F086Fd4140A296CF38C1AE30cC88a5CC5396e19"
+    },
+    {
+      "fixture": "noir-circuit",
+      "op": "verify",
+      "hash": "0xd491133b95b3b3aa3174d8060c79725489ff0996d4d00442df9a4b2ce7aae5ec",
+      "gasUsed": "108873",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "108873000000000000",
+      "status": "reverted",
+      "receiptStatus": 0,
+      "contractAddress": null,
+      "error": "OutOfGas",
+      "errorSource": "confirmed via raw RPC error on a read-only eth_call against the same address: failed to run contract: Module(ModuleError { index: 100, error: [3, 0, 0, 0], message: Some(\"OutOfGas\") })"
+    },
+    {
+      "fixture": "zkemail",
+      "op": "deploy",
+      "hash": "0x22f9755502669c13cd739de48ff1462e7aced39cc085085e6f7e2f21fa94fdb5",
+      "gasUsed": "5081686",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "5081686000000000000",
+      "status": "success",
+      "receiptStatus": 1,
+      "contractAddress": "0xe431ffAE13F58731d7A264d53238a006A5bAa5F7"
+    },
+    {
+      "fixture": "zkemail",
+      "op": "verify",
+      "hash": "0x900e72df7fc066989fa953c05da05eb35f2ff9171c5300e88bfd99cb06c12ea0",
+      "gasUsed": "133534",
+      "gasPriceWei": "1000000000000",
+      "feeGasWei": "133534000000000000",
+      "status": "reverted",
+      "receiptStatus": 0,
+      "contractAddress": null,
+      "error": "OutOfGas",
+      "errorSource": "confirmed via raw RPC error on a read-only eth_call against the same address: failed to run contract: Module(ModuleError { index: 100, error: [3, 0, 0, 0], message: Some(\"OutOfGas\") })"
+    }
+  ]
+}

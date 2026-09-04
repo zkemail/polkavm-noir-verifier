@@ -1,3 +1,9 @@
+//! PolkaVM contract entry point: circuit-specific, generated per build.
+//!
+//! `do_verify()`'s orchestration (load VK, load proof, generate transcript,
+//! compute public input delta, verify sumcheck, verify shplemini) is a direct
+//! translation of HonkVerifier.sol's `BaseHonkVerifier.verify()`.
+//! Source: `bb write_solidity_verifier` output (Aztec/Barretenberg).
 #![no_main]
 #![no_std]
 extern crate alloc;

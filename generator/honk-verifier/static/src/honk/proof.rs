@@ -1,6 +1,6 @@
 /// UltraHonk proof deserialization.
 ///
-/// Translated from Barretenberg's HonkVerifier.sol `loadProof()`.
+/// Translated from Barretenberg's HonkVerifier.sol `TranscriptLib.loadProof()`.
 /// Source: `bb write_solidity_verifier` output (Aztec/Barretenberg).
 /// Proof layout: 8 G1 commitments (split-encoded) + sumcheck univariates
 /// + sumcheck evaluations + Gemini fold commitments + evaluations

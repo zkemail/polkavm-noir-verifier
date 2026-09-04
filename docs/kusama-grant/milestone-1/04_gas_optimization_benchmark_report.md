@@ -23,7 +23,7 @@ A no-op `verify(bytes,bytes32[])` was deployed on both backends and its gas diff
 
 Four ways to get `HonkVerifier.sol`'s logic on-chain, measured fresh (2026-09-04, real transactions):
 
-- **PVM (native)**: our hand-written Rust verifier, compiled to PVM. Deployed and documented in [`05_testnet_deployment_validation.md`](./05_testnet_deployment_validation.md).
+- **PVM (native)**: our hand-written Rust verifier, compiled to PVM. Same deployment [`05_testnet_deployment_validation.md`](./05_testnet_deployment_validation.md) documents; addresses and provenance repeated here too for a self-contained comparison.
 - **PVM (resolc)**: the same `HonkVerifier.sol`, compiled straight to PVM by `resolc`, Solidity's own compiler for this target, no rewrite required.
 - **REVM**: `HonkVerifier.sol` compiled with plain `solc` to standard EVM bytecode, deployed on Paseo and run through Polkadot Hub's REVM engine.
 - **EVM**: the same REVM bytecode deployed to Ethereum Sepolia, as the real-mainnet cost baseline.
@@ -47,6 +47,8 @@ REVM and EVM execute identical compiled bytecode, so the ~24-29x verify-gas gap 
 
 | Fixture | Address | Deploy tx | Verify tx |
 | --- | --- | --- | --- |
+| PVM (native), noir-circuit | [`0x803bf952247f691b13Dd0D3A475D5C8f7F5B990e`](https://blockscout-testnet.polkadot.io/address/0x803bf952247f691b13Dd0D3A475D5C8f7F5B990e) (same as `05`) | [`0x7e5cb750...9d11c`](https://blockscout-testnet.polkadot.io/tx/0x7e5cb7505fe8eb00dc5d6a77f86a75031eb3514584590db55523ca0ca8d9d11c) | [`0xc3850b3c...157238`](https://blockscout-testnet.polkadot.io/tx/0xc3850b3ca649c22465ef1b9a78d382d6695f8723184070141cdfe1bf42157238) (receipt status=0, see note below) |
+| PVM (native), zkemail | [`0x6D0328072e8D39252066c8bc6489772e505df9a2`](https://blockscout-testnet.polkadot.io/address/0x6D0328072e8D39252066c8bc6489772e505df9a2) (same as `05`) | [`0x24798654...e34d84`](https://blockscout-testnet.polkadot.io/tx/0x247986548d317476adcc93cee24ee9214211ccd10fa7eb2e4695b7b318e34d84) | [`0x03025a34...7b49ae`](https://blockscout-testnet.polkadot.io/tx/0x03025a34b6a4f36a84a6855fbb297b804db6ab7375bf5303b65b76a85a7b49ae) (receipt status=0, see note below) |
 | PVM (resolc), noir-circuit | [`0x5F086Fd4140A296CF38C1AE30cC88a5CC5396e19`](https://blockscout-testnet.polkadot.io/address/0x5F086Fd4140A296CF38C1AE30cC88a5CC5396e19) | [`0x2c1d3af1...c6ce9`](https://blockscout-testnet.polkadot.io/tx/0x2c1d3af18c70cbb0555092aa9cb1f633a898a2575969d75719c70266487c6ce9) | every attempt reverts OutOfGas ([`0xd491133b...aae5ec`](https://blockscout-testnet.polkadot.io/tx/0xd491133b95b3b3aa3174d8060c79725489ff0996d4d00442df9a4b2ce7aae5ec)) |
 | PVM (resolc), zkemail | [`0xe431ffAE13F58731d7A264d53238a006A5bAa5F7`](https://blockscout-testnet.polkadot.io/address/0xe431ffAE13F58731d7A264d53238a006A5bAa5F7) | [`0x22f97555...4fdb5`](https://blockscout-testnet.polkadot.io/tx/0x22f9755502669c13cd739de48ff1462e7aced39cc085085e6f7e2f21fa94fdb5) | every attempt reverts OutOfGas ([`0x900e72df...12ea0`](https://blockscout-testnet.polkadot.io/tx/0x900e72df7fc066989fa953c05da05eb35f2ff9171c5300e88bfd99cb06c12ea0)) |
 | REVM, noir-circuit | [`0xf07Ad7f066f8fA09899F620C9Ace6FA87c2c3216`](https://blockscout-testnet.polkadot.io/address/0xf07Ad7f066f8fA09899F620C9Ace6FA87c2c3216) | [`0xbc647c00...0e706`](https://blockscout-testnet.polkadot.io/tx/0xbc647c00f9d317fac3119d70aeacf49b06730f48b1c76a65c12a2809b1c0e706) | [`0xb1e4cee8...bb1be`](https://blockscout-testnet.polkadot.io/tx/0xb1e4cee84dada687a5ba907b46aeb0716f8181746dd5e8afa52407367f0bb1be) |
@@ -54,20 +56,20 @@ REVM and EVM execute identical compiled bytecode, so the ~24-29x verify-gas gap 
 | EVM (Sepolia), noir-circuit | [`0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA`](https://sepolia.etherscan.io/address/0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA) | [`0x61e73a6c...8c9f88`](https://sepolia.etherscan.io/tx/0x61e73a6cb4e09b39971385ba22f5f774e8bc8eb6a5ff48fca5211cea478c9f88) | [`0x0480a47d...b844c`](https://sepolia.etherscan.io/tx/0x0480a47d3f76c7b2dab7c4a8eb3190df19eeaf98071ab39e6d07383096fb844c) |
 | EVM (Sepolia), zkemail | [`0x60276A3710AD578E8eecF221C8841b86dbfD757b`](https://sepolia.etherscan.io/address/0x60276A3710AD578E8eecF221C8841b86dbfD757b) | [`0x096a1e1c...7439a`](https://sepolia.etherscan.io/tx/0x096a1e1c135761295bfe15ee2faa7d68d88e2e7edeae5a0be85c0fd02b67439a) | [`0x055770ac...dabaf2`](https://sepolia.etherscan.io/tx/0x055770aca78b19836f4802051ca3acdcd9d49d89ab4f7bc07d5e076b38dabaf2) |
 
+`PVM (native)` verify receipts show `status=0` despite genuinely succeeding: pallet-revive returns a 1-byte (not 32-byte-padded) result for this call shape, which trips standard receipt-status logic. Confirmed genuine via a read-only `eth_call` against each address (`0x01` returned) before the mined transaction shown above.
+
 ### Bytecode Provenance
 
-`PVM (native)` provenance is already established in [`05_testnet_deployment_validation.md`](./05_testnet_deployment_validation.md#bytecode-provenance). For the three legs introduced here:
-
-`PVM (resolc)` on-chain bytecode matches the local `resolc` build byte-for-byte, same method as `05`'s table (`keccak256` match plus the `0x50564d0000` PVM magic prefix). `REVM`/`EVM` on-chain runtime code differs from the local compiled artifact by a handful of bytes - expected, since Solidity's `immutable` values get substituted into the runtime code during construction, and the local artifact is the full init code (constructor + runtime), not the stripped runtime that actually gets stored. What matters is that the Paseo (REVM) and Sepolia (EVM) deployments of the same source produce byte-for-byte identical on-chain code, confirmed directly.
+`PVM (native)` and `PVM (resolc)` have no Etherscan-equivalent source-verification service, so provenance here means the locally-computed bytecode hash matching what's deployed, checked directly against the chain: on-chain bytecode matches its local build byte-for-byte (`keccak256` match plus the `0x50564d0000` PVM magic prefix); `05`'s table has the same result for native, independently.
 
 | Fixture | Leg | `keccak256(deployedBytecode)` | Note |
 | --- | --- | --- | --- |
+| noir-circuit | PVM (native) | `0xbea07898e53d03101cde8979cd00c8279cb9b9c087635990996152d9daf6a62c` | on-chain == local, PVM magic `0x50564d0000` present; matches `05` |
+| zkemail | PVM (native) | `0x0f1ee18933512a784ddd488e91ded72a2e8c89830e9899cf141a75a0c092a45e` | on-chain == local, PVM magic `0x50564d0000` present; matches `05` |
 | noir-circuit | PVM (resolc) | `0x1ce3f51e8642e9619766992d4949ebbad3a887c85edd26edd9f136775ff11d92` | on-chain == local, PVM magic `0x50564d0000` present |
 | zkemail | PVM (resolc) | `0x8a02d5a983d4e5f4558d9a248d63431e19ee874dbdaf128247d5e2e2d42ac7a9` | on-chain == local, PVM magic `0x50564d0000` present |
-| noir-circuit | REVM / EVM | `0x22cf774ebba1607b828bc1c5a0175e51277fef5fa17a588aa46846cfb5e9694f` | identical on Paseo and Sepolia |
-| zkemail | REVM / EVM | `0x62ceccb8a738a49407da92922851978dbdcabfeaf013f713e294c538368d8d86` | identical on Paseo and Sepolia |
 
-`REVM` and `EVM` additionally have full source verification (Solidity source matched to on-chain bytecode by the explorer itself, not just a locally-computed hash comparison) - `PVM (native)` and `PVM (resolc)` have no equivalent tooling, same limitation noted in `05`:
+`REVM` and `EVM` instead have full source verification - the explorer itself independently recompiled the exact `HonkVerifier.sol` source with the exact compiler settings and confirmed it matches the deployed bytecode, a stronger and independently-checkable claim than a locally-computed hash comparison:
 
 | Fixture | Sepolia (Etherscan) | Paseo (Blockscout) |
 | --- | --- | --- |
@@ -76,30 +78,40 @@ REVM and EVM execute identical compiled bytecode, so the ~24-29x verify-gas gap 
 
 Reproduce the provenance table above directly (after `cd benchmarks && ./compile.sh`):
 
+noir-circuit:
+
 ```bash
-# PVM (resolc), noir-circuit: PVM magic prefix (expect 50564d0000)
+# PVM (native): PVM magic prefix (expect 50564d0000)
+cast code 0x803bf952247f691b13Dd0D3A475D5C8f7F5B990e --rpc-url https://eth-rpc-testnet.polkadot.io/ | cut -c1-12
+# on-chain hash
+cast code 0x803bf952247f691b13Dd0D3A475D5C8f7F5B990e --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
+# local build hash (expect a match with the line above)
+cat build/pvm-native/noir-circuit/honk_verifier.polkavm | xxd -p -c0 | (echo -n "0x"; cat) | cast keccak
+
+# PVM (resolc): PVM magic prefix (expect 50564d0000)
 cast code 0x5F086Fd4140A296CF38C1AE30cC88a5CC5396e19 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cut -c1-12
 # on-chain hash
 cast code 0x5F086Fd4140A296CF38C1AE30cC88a5CC5396e19 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
 # local build hash (expect a match with the line above)
 cat build/pvm-resolc/noir-circuit/HonkVerifier.polkavm | xxd -p -c0 | (echo -n "0x"; cat) | cast keccak
+```
 
-# PVM (resolc), zkemail: PVM magic prefix (expect 50564d0000)
+zkemail:
+
+```bash
+# PVM (native): PVM magic prefix (expect 50564d0000)
+cast code 0x6D0328072e8D39252066c8bc6489772e505df9a2 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cut -c1-12
+# on-chain hash
+cast code 0x6D0328072e8D39252066c8bc6489772e505df9a2 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
+# local build hash (expect a match with the line above)
+cat build/pvm-native/zkemail/honk_verifier.polkavm | xxd -p -c0 | (echo -n "0x"; cat) | cast keccak
+
+# PVM (resolc): PVM magic prefix (expect 50564d0000)
 cast code 0xe431ffAE13F58731d7A264d53238a006A5bAa5F7 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cut -c1-12
 # on-chain hash
 cast code 0xe431ffAE13F58731d7A264d53238a006A5bAa5F7 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
 # local build hash (expect a match with the line above)
 cat build/pvm-resolc/zkemail/HonkVerifier.polkavm | xxd -p -c0 | (echo -n "0x"; cat) | cast keccak
-
-# REVM, noir-circuit: on-chain runtime hash
-cast code 0xf07Ad7f066f8fA09899F620C9Ace6FA87c2c3216 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
-# EVM (Sepolia), noir-circuit: on-chain runtime hash (expect a match with the line above)
-cast code 0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA --rpc-url https://ethereum-sepolia-rpc.publicnode.com | cast keccak
-
-# REVM, zkemail: on-chain runtime hash
-cast code 0x7bF9091bfeF58bd0c217Ce1C75f961D9611e9FD0 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
-# EVM (Sepolia), zkemail: on-chain runtime hash (expect a match with the line above)
-cast code 0x60276A3710AD578E8eecF221C8841b86dbfD757b --rpc-url https://ethereum-sepolia-rpc.publicnode.com | cast keccak
 ```
 
 Raw results and the scripts that produced them are committed in [`benchmarks/`](./benchmarks/); its `aggregate.js` regenerates the table above directly from the committed JSON.

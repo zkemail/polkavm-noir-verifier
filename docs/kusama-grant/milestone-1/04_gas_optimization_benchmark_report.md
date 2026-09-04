@@ -54,6 +54,24 @@ REVM and EVM execute identical compiled bytecode, so the ~24-29x verify-gas gap 
 | EVM (Sepolia), noir-circuit | [`0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA`](https://sepolia.etherscan.io/address/0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA) | [`0x61e73a6c...8c9f88`](https://sepolia.etherscan.io/tx/0x61e73a6cb4e09b39971385ba22f5f774e8bc8eb6a5ff48fca5211cea478c9f88) | [`0x0480a47d...b844c`](https://sepolia.etherscan.io/tx/0x0480a47d3f76c7b2dab7c4a8eb3190df19eeaf98071ab39e6d07383096fb844c) |
 | EVM (Sepolia), zkemail | [`0x60276A3710AD578E8eecF221C8841b86dbfD757b`](https://sepolia.etherscan.io/address/0x60276A3710AD578E8eecF221C8841b86dbfD757b) | [`0x096a1e1c...7439a`](https://sepolia.etherscan.io/tx/0x096a1e1c135761295bfe15ee2faa7d68d88e2e7edeae5a0be85c0fd02b67439a) | [`0x055770ac...dabaf2`](https://sepolia.etherscan.io/tx/0x055770aca78b19836f4802051ca3acdcd9d49d89ab4f7bc07d5e076b38dabaf2) |
 
-All four legs' on-chain bytecode was hash-checked against the local build before these numbers were recorded: `resolc` output matches byte-for-byte (keccak match, PVM magic-prefix `0x50564d0000` present); REVM/EVM on-chain runtime code matches the local build with the expected handful of bytes differing (Solidity `immutable` substitution during construction), confirmed identical between the Paseo and Sepolia deployments of the same source.
+### Bytecode Provenance
+
+`PVM (native)` provenance is already established in [`05_testnet_deployment_validation.md`](./05_testnet_deployment_validation.md#bytecode-provenance). For the three legs introduced here:
+
+`PVM (resolc)` on-chain bytecode matches the local `resolc` build byte-for-byte, same method as `05`'s table (`keccak256` match plus the `0x50564d0000` PVM magic prefix). `REVM`/`EVM` on-chain runtime code differs from the local compiled artifact by a handful of bytes - expected, since Solidity's `immutable` values get substituted into the runtime code during construction, and the local artifact is the full init code (constructor + runtime), not the stripped runtime that actually gets stored. What matters is that the Paseo (REVM) and Sepolia (EVM) deployments of the same source produce byte-for-byte identical on-chain code, confirmed directly.
+
+| Fixture | Leg | `keccak256(deployedBytecode)` | Note |
+| --- | --- | --- | --- |
+| noir-circuit | PVM (resolc) | `0x1ce3f51e8642e9619766992d4949ebbad3a887c85edd26edd9f136775ff11d92` | on-chain == local, PVM magic `0x50564d0000` present |
+| zkemail | PVM (resolc) | `0x8a02d5a983d4e5f4558d9a248d63431e19ee874dbdaf128247d5e2e2d42ac7a9` | on-chain == local, PVM magic `0x50564d0000` present |
+| noir-circuit | REVM / EVM | `0x22cf774ebba1607b828bc1c5a0175e51277fef5fa17a588aa46846cfb5e9694f` | identical on Paseo and Sepolia |
+| zkemail | REVM / EVM | `0x62ceccb8a738a49407da92922851978dbdcabfeaf013f713e294c538368d8d86` | identical on Paseo and Sepolia |
+
+`REVM` and `EVM` additionally have full source verification (Solidity source matched to on-chain bytecode by the explorer itself, not just a locally-computed hash comparison) - `PVM (native)` and `PVM (resolc)` have no equivalent tooling, same limitation noted in `05`:
+
+| Fixture | Sepolia (Etherscan) | Paseo (Blockscout) |
+| --- | --- | --- |
+| noir-circuit | [verified](https://sepolia.etherscan.io/address/0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA#code) | [verified](https://blockscout-testnet.polkadot.io/address/0xf07Ad7f066f8fA09899F620C9Ace6FA87c2c3216) |
+| zkemail | [verified](https://sepolia.etherscan.io/address/0x60276A3710AD578E8eecF221C8841b86dbfD757b#code) | [verified](https://blockscout-testnet.polkadot.io/address/0x7bF9091bfeF58bd0c217Ce1C75f961D9611e9FD0) |
 
 Raw results and the scripts that produced them are committed in [`benchmarks/`](./benchmarks/); its `aggregate.js` regenerates the table above directly from the committed JSON.

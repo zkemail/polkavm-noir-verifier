@@ -74,4 +74,19 @@ REVM and EVM execute identical compiled bytecode, so the ~24-29x verify-gas gap 
 | noir-circuit | [verified](https://sepolia.etherscan.io/address/0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA#code) | [verified](https://blockscout-testnet.polkadot.io/address/0xf07Ad7f066f8fA09899F620C9Ace6FA87c2c3216) |
 | zkemail | [verified](https://sepolia.etherscan.io/address/0x60276A3710AD578E8eecF221C8841b86dbfD757b#code) | [verified](https://blockscout-testnet.polkadot.io/address/0x7bF9091bfeF58bd0c217Ce1C75f961D9611e9FD0) |
 
+Reproduce the provenance table above directly (after `cd benchmarks && ./compile.sh`):
+
+```bash
+# PVM (resolc): PVM magic prefix (expect 50564d0000) + on-chain vs local hash (expect a match)
+cast code 0x5F086Fd4140A296CF38C1AE30cC88a5CC5396e19 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cut -c1-12
+cast code 0x5F086Fd4140A296CF38C1AE30cC88a5CC5396e19 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
+cat build/pvm-resolc/noir-circuit/HonkVerifier.polkavm | xxd -p -c0 | (echo -n "0x"; cat) | cast keccak
+# same for zkemail: address 0xe431ffAE13F58731d7A264d53238a006A5bAa5F7, build/pvm-resolc/zkemail/HonkVerifier.polkavm
+
+# REVM vs EVM: on-chain runtime hash must match across chains for the same fixture (expect a match, no local file needed)
+cast code 0xf07Ad7f066f8fA09899F620C9Ace6FA87c2c3216 --rpc-url https://eth-rpc-testnet.polkadot.io/ | cast keccak
+cast code 0xb7ebf632fE49dA424b9bb362F03DCDF265F1a8EA --rpc-url https://ethereum-sepolia-rpc.publicnode.com | cast keccak
+# same for zkemail: REVM 0x7bF9091bfeF58bd0c217Ce1C75f961D9611e9FD0, EVM 0x60276A3710AD578E8eecF221C8841b86dbfD757b
+```
+
 Raw results and the scripts that produced them are committed in [`benchmarks/`](./benchmarks/); its `aggregate.js` regenerates the table above directly from the committed JSON.

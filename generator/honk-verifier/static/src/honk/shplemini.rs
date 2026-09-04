@@ -1,6 +1,6 @@
 /// Shplemini: KZG batch opening verification for UltraHonk.
 ///
-/// Translated from HonkVerifier.sol `batchedShpleminiVerification()`.
+/// Translated from HonkVerifier.sol `CommitmentSchemeLib.verifyShplemini()`.
 /// Source: Aztec/Barretenberg `bb write_solidity_verifier` output.
 ///
 /// Combines Gemini fold evaluations + Shplonk batching + KZG pairing check.

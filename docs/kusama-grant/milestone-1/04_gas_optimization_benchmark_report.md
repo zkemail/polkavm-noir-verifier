@@ -30,6 +30,8 @@ Four ways to get `HonkVerifier.sol`'s logic on-chain, measured fresh (2026-09-04
 
 | | PVM (native) | PVM (resolc) | REVM | EVM |
 | --- | ---: | ---: | ---: | ---: |
+| Bytecode size - noir-circuit | 50,616 | 567,925 | 21,579 | 21,579 |
+| Bytecode size - zkemail | 59,743 | 567,934 | 21,585 | 21,585 |
 | Deploy gas - noir-circuit | 728,487 | 5,081,613 | 495,855 | 4,718,904 |
 | Deploy gas - zkemail | 801,745 | 5,081,686 | 495,914 | 4,720,172 |
 | Verify gas - noir-circuit | 74,371 | fails - OutOfGas | 76,779 | 1,826,487 |

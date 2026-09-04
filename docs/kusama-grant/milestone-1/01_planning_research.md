@@ -2,7 +2,7 @@
 
 ## Context
 
-The starting point was a working Noir circuit (`assert(x != y)`, 1 public input, `bb` v0.84.0, `nargo` 1.0.0-beta.5) and the goal of a native Rust PolkaVM contract that verifies its UltraHonk proof on Paseo Asset Hub, without going through `resolc` (which produces undeployable-in-practice bytecode for `HonkVerifier.sol` - see the Context section of the grant proposal and `05_cost_benchmarks.md` in a later milestone for the measured comparison).
+The starting point was a working Noir circuit (`assert(x != y)`, 1 public input, `bb` v0.84.0, `nargo` 1.0.0-beta.5) and the goal of a native Rust PolkaVM contract that verifies its UltraHonk proof on Paseo Asset Hub, without going through `resolc` (which produces undeployable-in-practice bytecode for `HonkVerifier.sol` - see the Context section of the grant proposal and [`04_gas_optimization_benchmark_report.md`](./04_gas_optimization_benchmark_report.md) for the measured comparison).
 
 ## Translation strategy: a tested, rejected alternative
 

@@ -26,7 +26,7 @@ simplealloc = { version = "0.0.1", git = "https://github.com/paritytech/polkavm.
 pallet-revive-uapi = { version = "0.10", default-features = false }
 ```
 
-The streaming-keccak swap was a deliberate, measured change, not the original implementation: the runtime originally used in-VM `tiny-keccak`, replaced with the host-function call after benchmarking showed it was a measurable share of verify gas (`9bf895b` "Streaming keccak in transcript: eliminate all Vec allocations", `66c0631` "Swap tiny-keccak -> pallet-revive api::hash_keccak_256 (4.5% verify, REVM parity)") - see [`04_gas_optimization_benchmark_report.md`](./04_gas_optimization_benchmark_report.md) (pending) for the measured numbers.
+The streaming-keccak swap was a deliberate, measured change, not the original implementation: the runtime originally used in-VM `tiny-keccak`, replaced with the host-function call after benchmarking showed it was a measurable share of verify gas (`9bf895b` "Streaming keccak in transcript: eliminate all Vec allocations", `66c0631` "Swap tiny-keccak -> pallet-revive api::hash_keccak_256 (4.5% verify, REVM parity)") - see [`04_gas_optimization_benchmark_report.md`](./04_gas_optimization_benchmark_report.md) for the measured numbers.
 
 ## Proof it works
 

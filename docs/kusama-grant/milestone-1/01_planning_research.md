@@ -22,11 +22,11 @@ The library was tested against real proof artifacts across multiple `bb` version
 The conclusion, reached after this testing rather than assumed upfront: `HonkVerifier.sol`, produced directly by the same `bb` version used to generate the proof, is the one artifact guaranteed to be format-compatible. Translating it mechanically to Rust removes the version-matching problem entirely, since the translation happens per-circuit, from that circuit's own generated reference, not against a separately-versioned library.
 
 **Sources:**
-- [`398626a`](https://github.com/zkemail/polkavm-noir-verifier/commit/398626a) (2026-04-16) - initial implementation plan.
-- [`81f6811`](https://github.com/zkemail/polkavm-noir-verifier/commit/81f6811) (2026-04-17) - decision to try `ultrahonk_no_std` first, before the direct-translation approach.
-- [`eff60d2`](https://github.com/zkemail/polkavm-noir-verifier/commit/eff60d2) (2026-04-17) - `ultrahonk_no_std` confirmed incompatible via a direct spike, pivot to `HonkVerifier.sol` translation.
-- [`f0f451f`](https://github.com/zkemail/polkavm-noir-verifier/commit/f0f451f) (2026-04-17) - root cause documented, `bb` version reverted to 0.84.0 to match the circuit artifacts in use.
-- [`7411336`](https://github.com/zkemail/polkavm-noir-verifier/commit/7411336) (2026-04-19) - full library comparison table above, written up in detail.
+- [`27cba28`](https://github.com/zkemail/polkavm-noir-verifier/commit/27cba28) (2026-04-16) - initial implementation plan.
+- [`b418fa2`](https://github.com/zkemail/polkavm-noir-verifier/commit/b418fa2) (2026-04-17) - decision to try `ultrahonk_no_std` first, before the direct-translation approach.
+- [`5e09912`](https://github.com/zkemail/polkavm-noir-verifier/commit/5e09912) (2026-04-17) - `ultrahonk_no_std` confirmed incompatible via a direct spike, pivot to `HonkVerifier.sol` translation.
+- [`ba7c479`](https://github.com/zkemail/polkavm-noir-verifier/commit/ba7c479) (2026-04-17) - root cause documented, `bb` version reverted to 0.84.0 to match the circuit artifacts in use.
+- [`c902572`](https://github.com/zkemail/polkavm-noir-verifier/commit/c902572) (2026-04-19) - full library comparison table above, written up in detail.
 
 ## BN254 operations to PolkaVM precompile mapping
 
@@ -41,7 +41,7 @@ The conclusion, reached after this testing rather than assumed upfront: `HonkVer
 
 `keccak256`, used throughout for the Fiat-Shamir transcript, is not a precompile call in the shipped runtime - the initial plan called for `tiny-keccak` run in-VM, later replaced with `pallet-revive-uapi`'s native `hash_keccak_256` host function once benchmarking showed the in-VM version was a measurable share of verify gas (see Milestone 1's Gas Optimization & Benchmark Report deliverable).
 
-**Source:** [`7411336`](https://github.com/zkemail/polkavm-noir-verifier/commit/7411336) (2026-04-19), "What HonkVerifier.sol Actually Uses" section.
+**Source:** [`c902572`](https://github.com/zkemail/polkavm-noir-verifier/commit/c902572) (2026-04-19), "What HonkVerifier.sol Actually Uses" section.
 
 ## Generator design: circuit-specific vs. generic
 
@@ -63,5 +63,5 @@ Once the translation approach was settled, the generator's own design followed d
 The generator parses the circuit-specific constants and G1 points out of `HonkVerifier.sol` via regex, templates three circuit-specific files (`vk.rs`, `main.rs`, `sumcheck.rs`), and copies the generic modules verbatim. This is the same structure the shipped `generator/` still uses.
 
 **Sources:**
-- [`6d59266`](https://github.com/zkemail/polkavm-noir-verifier/commit/6d59266) (2026-04-21) - generator design plan.
-- [`f4091fd`](https://github.com/zkemail/polkavm-noir-verifier/commit/f4091fd) (2026-04-22) - generator plan updated with remaining TODOs, superseded once the generator itself was working (both plan documents were removed once implementation caught up - [`b7a3a95`](https://github.com/zkemail/polkavm-noir-verifier/commit/b7a3a95) and [`e37ede1`](https://github.com/zkemail/polkavm-noir-verifier/commit/e37ede1)).
+- [`cba73a4`](https://github.com/zkemail/polkavm-noir-verifier/commit/cba73a4) (2026-04-21) - generator design plan.
+- [`fa33c47`](https://github.com/zkemail/polkavm-noir-verifier/commit/fa33c47) (2026-04-22) - generator plan updated with remaining TODOs, superseded once the generator itself was working (both plan documents were removed once implementation caught up - [`24114cf`](https://github.com/zkemail/polkavm-noir-verifier/commit/24114cf) and [`13e6737`](https://github.com/zkemail/polkavm-noir-verifier/commit/13e6737)).

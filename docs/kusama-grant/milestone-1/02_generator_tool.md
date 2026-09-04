@@ -10,7 +10,7 @@ Milestone 1 evidence for the codegen tool: parses a circuit's `HonkVerifier.sol`
 - [`generate.ts`](../../../generator/honk-verifier/generate.ts) - fills three circuit-specific templates (`vk.rs`, `main.rs`, `sumcheck.rs`) from [`templates/`](../../../generator/honk-verifier/templates/), copies the generic verifier modules from [`static/`](../../../generator/honk-verifier/static/) unchanged, and (with `--build`) runs `cargo build --release` + `polkatool link` to produce the deployable `.polkavm` binary.
 - Heap size is computed per-circuit from `NUMBER_OF_PUBLIC_INPUTS` (`calculateHeapKB` in `generate.ts`), not hardcoded - see [`03_native_verifier_runtime.md`](./03_native_verifier_runtime.md) for how that heap budget is used.
 
-Structure - circuit-specific router in `generate-verifier.ts` (2026-04-22, [`610ed43`](https://github.com/zkemail/polkavm-noir-verifier/commit/610ed43) "Refactor generator: router + template-specific modules + .rs.tmpl files") - is the same shape shipped today.
+Structure - circuit-specific router in `generate-verifier.ts` (2026-04-22, [`22ff2e0`](https://github.com/zkemail/polkavm-noir-verifier/commit/22ff2e0) "Refactor generator: router + template-specific modules + .rs.tmpl files") - is the same shape shipped today.
 
 ## Proof it works
 

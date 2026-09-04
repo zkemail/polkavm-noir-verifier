@@ -24,7 +24,7 @@ Seven fixtures, deliberately designed to cover public-input count and `LOG_N` as
 | `fixtures/huge-circuit` | Genuinely bigger than the production circuit, and a different power-of-two bucket (`LOG_N=21` vs. `LOG_N=19`), not just a bigger number in the same one |
 | `fixtures/zkemail` | Real production circuit - both axes large simultaneously, the one combined case nothing else covers |
 
-Real-Paseo deployment coverage across this matrix (beyond `scripts/test.sh`'s existing single-circuit Paseo checks) is Milestone 1's separate "Testnet Deployment & Validation" deliverable, not yet delivered - see that deliverable's evidence doc once it lands rather than treating any figure here as a substitute.
+Real-Paseo deployment coverage across this matrix is Milestone 1's separate "Testnet Deployment & Validation" deliverable - see [`05_testnet_deployment_validation.md`](./05_testnet_deployment_validation.md).
 
 ## Proof it works
 

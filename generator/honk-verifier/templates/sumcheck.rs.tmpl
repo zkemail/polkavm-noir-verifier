@@ -1,3 +1,9 @@
+/// Sumcheck round verification, a runtime `for` loop over `LOG_N`
+/// ([`buildSumcheckRounds`](../generate.ts) in `generate.ts`), not
+/// generator-unrolled per circuit.
+///
+/// Translated from HonkVerifier.sol `BaseHonkVerifier.verifySumcheck()`.
+/// Source: `bb write_solidity_verifier` output (Aztec/Barretenberg).
 use crate::honk::fr::{
     Fr, BARYCENTRIC_DENOMS, FR_FIVE, FR_FOUR, FR_SEVEN, FR_SIX, FR_THREE, FR_TWO,
 };

@@ -2,5 +2,8 @@
   "address": "0x3448AD1c56E532b8bFf210B879DF231DbcA84125",
   "txHash": "0x03e7a59c42071779385eb6b71c4126332d60efa13c8eb4a578b1b630f75d2fad",
   "deployGasUsed": "1230239",
-  "timestamp": "2026-09-04T12:21:53.434Z"
+  "timestamp": "2026-09-04T12:21:53.434Z",
+  "verifyTxHash": "0x10d93d2973a49fc6d528eca72e2e8958c725ecd839e34ab324e6a124efd1c227",
+  "verifyGasUsed": "241209",
+  "verifyNote": "receipt status=0 but genuinely succeeded (pallet-revive 1-byte return-data quirk), confirmed via read-only eth_call returning 0x01 before this tx"
 }

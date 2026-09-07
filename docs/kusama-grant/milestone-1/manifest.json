@@ -1,0 +1,105 @@
+{
+  "repo": "zkemail/polkavm-noir-verifier",
+  "milestone": 1,
+  "updated_at": "2026-09-07T19:43:20Z",
+  "branch": "main",
+  "commit_sha": "2ac8e8da033fdc1a0673026878eafc5c0b60f876",
+  "ci": {
+    "workflow": "Equivalence Tests",
+    "at_commit_sha": {
+      "url": "https://github.com/zkemail/polkavm-noir-verifier/actions/runs/33926086259",
+      "conclusion": "success"
+    },
+    "full_matrix_validation_run": {
+      "url": "https://github.com/zkemail/polkavm-noir-verifier/actions/runs/33628567922",
+      "conclusion": "success",
+      "note": "first CI run to validate the full 35/35 matrix (5 test vectors x 7 circuit shapes), documented in docs/kusama-grant/milestone-1/06_automated_test_suite_ci.md"
+    }
+  },
+  "compiler_versions": {
+    "rust": "nightly-2026-04-20",
+    "polkatool": "0.25.0",
+    "resolc": "1.4.0",
+    "solc": "0.8.36",
+    "nargo": "1.0.0-beta.5",
+    "bb": "0.84.0"
+  },
+  "network": {
+    "name": "Paseo Asset Hub",
+    "chain_id": 420420417,
+    "rpc": "https://eth-rpc-testnet.polkadot.io/",
+    "explorer": "https://blockscout-testnet.polkadot.io/"
+  },
+  "verifiers": [
+    {
+      "fixture": "fixtures/zero-pub-input",
+      "address": "0x178D9F2CdF294Fe786fA93CbaF02D12E61168093",
+      "deploy_tx": "0x26d2cae0fc5a72a4e45bf93ca7848a28be80c697ccbd9da4c4a969e7aff7648d",
+      "deploy_gas_used": "727251",
+      "verify_tx": "0x463be6e52538c8b133bee24d7251129a48d3731eee98a4750044f2891547a9a4",
+      "verify_gas_used": "74191",
+      "bytecode_keccak256": "0xa2d4e009041471b2147b227f7533903fcb964a8355fd8e03cabe9a522213b9c9",
+      "deployed_at": "2026-09-04T12:21:19.726Z"
+    },
+    {
+      "fixture": "fixtures/noir-circuit",
+      "address": "0x803bf952247f691b13Dd0D3A475D5C8f7F5B990e",
+      "deploy_tx": "0x7e5cb7505fe8eb00dc5d6a77f86a75031eb3514584590db55523ca0ca8d9d11c",
+      "deploy_gas_used": "728487",
+      "verify_tx": "0xc3850b3ca649c22465ef1b9a78d382d6695f8723184070141cdfe1bf42157238",
+      "verify_gas_used": "74371",
+      "bytecode_keccak256": "0xbea07898e53d03101cde8979cd00c8279cb9b9c087635990996152d9daf6a62c",
+      "deployed_at": "2026-09-04T12:20:38.850Z"
+    },
+    {
+      "fixture": "fixtures/multi-pub-input",
+      "address": "0xBF65a1058ed1A28842a1d3D7Af32aDf6b3aFf02D",
+      "deploy_tx": "0x50b59ab7751678fc9b4084915c734807215bb5cd3448aa2f3fe7c97c20b4c081",
+      "deploy_gas_used": "730590",
+      "verify_tx": "0x5243541fe990ec6f76343799ac0f39cf52dd0a35ae08fa3b8b1cf20c6005e8e4",
+      "verify_gas_used": "75040",
+      "bytecode_keccak256": "0x2a466752824a828e8654f22539d4d7700f6a273a88689b6f36376a17faeffe6e",
+      "deployed_at": "2026-09-04T12:21:33.714Z"
+    },
+    {
+      "fixture": "fixtures/huge-pub-input",
+      "address": "0x3448AD1c56E532b8bFf210B879DF231DbcA84125",
+      "deploy_tx": "0x03e7a59c42071779385eb6b71c4126332d60efa13c8eb4a578b1b630f75d2fad",
+      "deploy_gas_used": "1230239",
+      "verify_tx": "0x10d93d2973a49fc6d528eca72e2e8958c725ecd839e34ab324e6a124efd1c227",
+      "verify_gas_used": "241209",
+      "bytecode_keccak256": "0x739a90c8e1fefbbc777deb5f1f87566d0ef32d07fce58e16ac0b29a465db8695",
+      "deployed_at": "2026-09-04T12:21:53.434Z"
+    },
+    {
+      "fixture": "fixtures/large-circuit",
+      "address": "0x66cb4A0963a770057e0e0D58430c899618dd9F72",
+      "deploy_tx": "0xed2b99765ae498d676548b8c551a2b878509c6094a02fd951712b2c101885754",
+      "deploy_gas_used": "728929",
+      "verify_tx": "0xfa9df37829804eb2568f6bf243010c940a84fe42996754f870f31b0d71d9f70f",
+      "verify_gas_used": "74371",
+      "bytecode_keccak256": "0x6acb27a7a7dab55850e874f624be1259e34a01452d79169467b0c72e1db0638a",
+      "deployed_at": "2026-09-04T12:21:46.331Z"
+    },
+    {
+      "fixture": "fixtures/huge-circuit",
+      "address": "0xD071BcDab20bCb2aD13684174C421Ce86D5AAeb3",
+      "deploy_tx": "0xc995c7767202fe4e35ba47403effaacd45c5fcdfb3191c22d3f7c89eb5ec2cd5",
+      "deploy_gas_used": "728937",
+      "verify_tx": "0x99bda2c970e0aa6e48762ef8204ba424eb5eee7857e078794b5c0e602187367e",
+      "verify_gas_used": "74370",
+      "bytecode_keccak256": "0x5fd0783987acd36a9fa22c76e6286d7f0fc7dcc2f121d9da7a074950c78ab704",
+      "deployed_at": "2026-09-04T12:22:20.437Z"
+    },
+    {
+      "fixture": "fixtures/zkemail",
+      "address": "0x6D0328072e8D39252066c8bc6489772e505df9a2",
+      "deploy_tx": "0x247986548d317476adcc93cee24ee9214211ccd10fa7eb2e4695b7b318e34d84",
+      "deploy_gas_used": "801745",
+      "verify_tx": "0x03025a34b6a4f36a84a6855fbb297b804db6ab7375bf5303b65b76a85a7b49ae",
+      "verify_gas_used": "100081",
+      "bytecode_keccak256": "0x0f1ee18933512a784ddd488e91ded72a2e8c89830e9899cf141a75a0c092a45e",
+      "deployed_at": "2026-09-04T12:23:19.900Z"
+    }
+  ]
+}

@@ -23,3 +23,4 @@ Primary Goal: deliver the PolkaVM-native UltraHonk verifier generator: the tool 
 - [`05_testnet_deployment_validation.md`](./05_testnet_deployment_validation.md) - real Paseo Asset Hub deployment across the circuit-shape matrix, with bytecode provenance.
 - [`06_automated_test_suite_ci.md`](./06_automated_test_suite_ci.md) - local-devnet equivalence harness, circuit-shape matrix, and CI wiring.
 - [`07_documentation.md`](./07_documentation.md) - generator usage docs, and a Solidity-to-Rust provenance mapping verified module by module.
+- [`manifest.json`](./manifest.json) - machine-readable snapshot locking the `main` commit SHA, CI run URLs, compiler versions, and per-fixture deployment/verification data this milestone's evidence was finalized against.

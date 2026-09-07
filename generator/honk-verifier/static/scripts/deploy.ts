@@ -9,8 +9,17 @@ const __dirname = path.dirname(process.argv[1]);
 const ROOT = path.join(__dirname, '..');
 dotenv.config({ path: path.join(ROOT, '.env') });
 
-const RPC_URL = 'https://eth-rpc-testnet.polkadot.io/';
+// Defaults to Paseo testnet; override via RPC_URL in .env to target a
+// different network (e.g. Kusama Asset Hub mainnet) without a code change.
+const RPC_URL = process.env.RPC_URL || 'https://eth-rpc-testnet.polkadot.io/';
 const PRIVATE_KEY = process.env.PRIVATE_KEY || '';
+
+// Cosmetic only (balance-line label) - falls back to a generic label for any
+// chain not listed here, so an unrecognized RPC_URL still deploys correctly.
+const NATIVE_TOKEN_BY_CHAIN_ID: Record<number, string> = {
+  420420417: 'PAS', // Paseo Asset Hub testnet
+  420420418: 'KSM', // Kusama Asset Hub mainnet
+};
 
 async function main() {
   if (!PRIVATE_KEY) {
@@ -20,10 +29,12 @@ async function main() {
 
   const provider = new ethers.JsonRpcProvider(RPC_URL);
   const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+  const network = await provider.getNetwork();
+  const nativeToken = NATIVE_TOKEN_BY_CHAIN_ID[Number(network.chainId)] ?? 'native token';
 
   console.log('Deployer:', wallet.address);
   const balance = await provider.getBalance(wallet.address);
-  console.log('Balance:', ethers.formatEther(balance), 'PAS\n');
+  console.log(`Balance: ${ethers.formatEther(balance)} ${nativeToken}\n`);
 
   const bytecode = fs.readFileSync(path.join(ROOT, 'honk_verifier.polkavm'));
   console.log(`Contract size: ${bytecode.length} bytes`);

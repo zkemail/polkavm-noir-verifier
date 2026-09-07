@@ -127,9 +127,10 @@ const PROOF_SIZE: usize = 14080;
 /// the strict-Solidity 32-byte `bool true` ABI because pallet-revive's
 /// EVM-RPC adapter currently flags multi-byte returns as `status=0`
 /// (reverted) in transaction receipts even when the contract executed
-/// successfully — see notes in FINDINGS. Clients should decode the return
-/// as `bytes1` (`0x01` = success) and rely on the custom-error selector
-/// in revert data for failure cases.
+/// successfully, confirmed genuine via a read-only eth_call returning
+/// 0x01 before the real mined transaction. Clients should decode the
+/// return as `bytes1` (`0x01` = success) and rely on the custom-error
+/// selector in revert data for failure cases.
 const RETURN_TRUE_BYTE: [u8; 1] = [1];
 
 /// keccak256("ProofLengthWrong()")[:4] — matches HonkVerifier.sol

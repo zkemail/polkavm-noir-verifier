@@ -240,5 +240,5 @@ fn compute_public_input_delta(
         denominator_acc = denominator_acc - beta;
     }
 
-    numerator * denominator.inverse().unwrap()
+    numerator * denominator.inverse().unwrap_or(Fr::zero())
 }

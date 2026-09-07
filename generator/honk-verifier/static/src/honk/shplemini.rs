@@ -52,7 +52,7 @@ fn compute_fold_pos_evaluations(
             - gemini_evaluations[i - 1] * (challenge_power * (Fr::one() - u) - u);
         let denominator = challenge_power * (Fr::one() - u) + u;
 
-        let new_acc = numerator * denominator.inverse().unwrap();
+        let new_acc = numerator * denominator.inverse().unwrap_or(Fr::zero());
 
         if i <= log_size {
             acc = new_acc;
@@ -75,12 +75,12 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
     let mut scalars: alloc::vec::Vec<Fr> = alloc::vec![Fr::zero(); TOTAL];
     let mut commitments: alloc::vec::Vec<G1Point> = alloc::vec![G1Point::infinity(); TOTAL];
 
-    let pos_inv_denom = (t.shplonk_z - powers_of_r[0]).inverse().unwrap();
-    let neg_inv_denom = (t.shplonk_z + powers_of_r[0]).inverse().unwrap();
+    let pos_inv_denom = (t.shplonk_z - powers_of_r[0]).inverse().unwrap_or(Fr::zero());
+    let neg_inv_denom = (t.shplonk_z + powers_of_r[0]).inverse().unwrap_or(Fr::zero());
 
     let unshifted_scalar = pos_inv_denom + t.shplonk_nu * neg_inv_denom;
     let shifted_scalar =
-        t.gemini_r.inverse().unwrap() * (pos_inv_denom - t.shplonk_nu * neg_inv_denom);
+        t.gemini_r.inverse().unwrap_or(Fr::zero()) * (pos_inv_denom - t.shplonk_nu * neg_inv_denom);
 
     scalars[0] = Fr::one();
     commitments[0] = convert_proof_point(&proof.shplonk_q);
@@ -167,8 +167,8 @@ pub fn verify_shplemini(proof: &Proof, vk: &VerificationKey, t: &Transcript) -> 
         let idx = NUMBER_OF_ENTITIES + 1 + i;
 
         if !dummy_round {
-            let pos_inv = (t.shplonk_z - powers_of_r[i + 1]).inverse().unwrap();
-            let neg_inv = (t.shplonk_z + powers_of_r[i + 1]).inverse().unwrap();
+            let pos_inv = (t.shplonk_z - powers_of_r[i + 1]).inverse().unwrap_or(Fr::zero());
+            let neg_inv = (t.shplonk_z + powers_of_r[i + 1]).inverse().unwrap_or(Fr::zero());
 
             let scaling_factor_pos = batching_challenge * pos_inv;
             let scaling_factor_neg = batching_challenge * t.shplonk_nu * neg_inv;

@@ -8,7 +8,7 @@
 /// These are native implementations in the Polkadot runtime (not interpreted),
 /// making them much cheaper than pure-Rust EC arithmetic inside PolkaVM.
 /// Point format: uncompressed affine (x, y), each 32 bytes big-endian (Fq).
-use pallet_revive_uapi::{CallFlags, HostFn, HostFnImpl as api};
+use pallet_revive_uapi::{CallFlags, HostFn, HostFnImpl as api, ReturnFlags};
 
 /// A BN254 G1 affine point (uncompressed, big-endian field elements).
 #[derive(Clone, Copy, Debug)]
@@ -88,7 +88,10 @@ pub fn ec_add(p: G1Point, q: G1Point) -> G1Point {
     input[96..128].copy_from_slice(&q.y);
 
     let mut output = [0u8; 64];
-    call_precompile(0x06, &input, &mut output);
+    // HonkVerifier.sol's `batchMul` also accumulates this staticcall's
+    // success flag but never checks or reverts on it (dead code there too),
+    // so discarding it here matches the reference's own behavior.
+    let _ = call_precompile(0x06, &input, &mut output);
 
     G1Point {
         x: output[0..32].try_into().unwrap(),
@@ -112,7 +115,10 @@ pub fn ec_mul(p: G1Point, scalar: &[u8; 32]) -> G1Point {
     input[64..96].copy_from_slice(scalar);
 
     let mut output = [0u8; 64];
-    call_precompile(0x07, &input, &mut output);
+    // HonkVerifier.sol's `batchMul` also accumulates this staticcall's
+    // success flag but never checks or reverts on it (dead code there too),
+    // so discarding it here matches the reference's own behavior.
+    let _ = call_precompile(0x07, &input, &mut output);
 
     G1Point {
         x: output[0..32].try_into().unwrap(),
@@ -135,17 +141,22 @@ pub fn ec_pairing_check(p0: G1Point, g2_0: &[u8; 128], p1: G1Point, g2_1: &[u8; 
     input[256..384].copy_from_slice(g2_1);
 
     let mut output = [0u8; 32];
-    call_precompile(0x08, &input, &mut output);
+    // Matches HonkVerifier.sol's `pairing()`, which checks staticcall success
+    // and reverts (there, implicitly via `abi.decode` on empty return data)
+    // rather than silently treating a failed call as a rejected proof.
+    if call_precompile(0x08, &input, &mut output).is_err() {
+        api::return_value(ReturnFlags::REVERT, &[]);
+    }
 
     // Output is 1 (success) if pairing product = 1
     output[31] == 1
 }
 
-fn call_precompile(addr: u8, input: &[u8], output: &mut [u8]) {
+fn call_precompile(addr: u8, input: &[u8], output: &mut [u8]) -> Result<(), pallet_revive_uapi::ReturnErrorCode> {
     let target = precompile_address(addr);
     let gas = api::gas_left() / 2;
     let mut output_ref: &mut [u8] = output;
-    let _ = api::call(
+    api::call(
         CallFlags::empty(),
         &target,
         gas,
@@ -154,5 +165,5 @@ fn call_precompile(addr: u8, input: &[u8], output: &mut [u8]) {
         &[0u8; 32], // value
         input,
         Some(&mut output_ref),
-    );
+    )
 }

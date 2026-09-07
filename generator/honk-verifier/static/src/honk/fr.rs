@@ -13,7 +13,7 @@
 /// (which depends on every Fr operation) produces identical results to
 /// Barretenberg's `bb verify` for valid and invalid proofs.
 use core::ops::{Add, Mul, Neg, Sub};
-use pallet_revive_uapi::{CallFlags, HostFn, HostFnImpl as api};
+use pallet_revive_uapi::{CallFlags, HostFn, HostFnImpl as api, ReturnFlags};
 
 /// P in 64-bit limbs (little-endian limb order)
 pub const P: [u64; 4] = [
@@ -599,7 +599,7 @@ fn mod_inverse_normal_modexp(a: &[u64; 4]) -> Option<[u64; 4]> {
     let mut output_ref: &mut [u8] = &mut output;
     let target = modexp_precompile_address();
     let gas = api::gas_left() / 2;
-    let _ = api::call(
+    let result = api::call(
         CallFlags::empty(),
         &target,
         gas,
@@ -609,6 +609,12 @@ fn mod_inverse_normal_modexp(a: &[u64; 4]) -> Option<[u64; 4]> {
         &input,
         Some(&mut output_ref),
     );
+    // Matches HonkVerifier.sol's `if iszero(success) { revert(0, 0) }` on the
+    // same modexp call in FrLib.invert() — an empty-data revert rather than
+    // silently returning a bogus zero "inverse" for a nonzero input.
+    if result.is_err() {
+        api::return_value(ReturnFlags::REVERT, &[]);
+    }
 
     Some(be_bytes_to_limbs(&output))
 }

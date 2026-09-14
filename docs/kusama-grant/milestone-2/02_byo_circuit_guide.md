@@ -94,7 +94,7 @@ interface IHonkVerifier {
 }
 ```
 
-Selector `0xea50d0e4`. On success, returns a single `0x01` byte (not the strict-Solidity 32-byte `bool true` ABI - see the pallet-revive receipt-status note below). On failure it reverts - it never returns `0x00` - with either a 4-byte custom-error selector matching the REVM-compiled Solidity reference byte-for-byte (`ProofLengthWrong()`, `PublicInputsLengthWrong()`, `SumcheckFailed()`, `ShpleminiFailed()`), or a plain ASCII revert string for calldata-shape failures that have no Solidity-reference equivalent (`INPUT_TOO_SHORT`, `UNKNOWN_FUNCTION`, `ABI_DECODE_FAILED`).
+Selector `0xea50d0e4`. On success, returns a single `0x01` byte (not the strict-Solidity 32-byte `bool true` ABI - see the pallet-revive receipt-status note below). On failure it reverts - it never returns `0x00` - with either a 4-byte custom-error selector matching the REVM-compiled Solidity reference byte-for-byte (`ProofLengthWrong()`, `PublicInputsLengthWrong()`, `SumcheckFailed()`, `ShpleminiFailed()`), or a plain ASCII revert string for calldata-shape failures that have no Solidity-reference equivalent (`INPUT_TOO_SHORT`, `UNKNOWN_FUNCTION`, `ABI_DECODE_FAILED`, `INPUT_TOO_LARGE` - see Milestone 2's [`01_internal_security_review.md`](../milestone-2/01_internal_security_review.md#finding-3---unbounded-heap-allocation-from-raw-calldata-length) for why the last one exists).
 
 ## Troubleshooting
 

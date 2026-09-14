@@ -17,6 +17,6 @@ Primary Goal: review the tool for security, document it for external developers,
 
 ## Evidence Index
 
-- [`01_internal_security_review.md`](./01_internal_security_review.md) - 3 findings, all fixed and verified (2 by regression + live devnet reproduction, 1 by direct live testing), plus stack-sizing and overflow-handling axes ruled out with concrete arguments.
+- [`01_internal_security_review.md`](./01_internal_security_review.md) - 3 findings, all fixed. 2 verified via regression only, since their failure branches are untestable by construction (cryptographic negligibility / no host-call-failure injection available); the third via live before/after reproduction on a real deployed contract, plus regression. Stack-sizing and overflow-handling axes ruled out with concrete arguments, no fix needed.
 - [`02_byo_circuit_guide.md`](./02_byo_circuit_guide.md) - step-by-step guide for a developer's own Noir circuit, verified against a circuit built specifically for that verification, not one of this repo's existing fixtures.
 - [`03_kusama_mainnet_deployment.md`](./03_kusama_mainnet_deployment.md) - reference circuit confirmed, `deploy.ts` fixed and rehearsed on Paseo, mainnet cost estimated from a live chain read. Real mainnet execution and its evidence (address, deploy/verify tx, bytecode provenance) still pending curator go-ahead.

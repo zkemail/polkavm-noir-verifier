@@ -1,6 +1,6 @@
 # 03 - Kusama Mainnet Deployment
 
-Milestone 2 deliverable: deploy a reference verifier to Kusama Asset Hub mainnet and verify correct functionality.
+Milestone 2 deliverable: deploy a reference verifier (e.g. the zkemail circuit) to Kusama Asset Hub mainnet and verify correct functionality.
 
 ## Status: prep complete, execution on hold
 

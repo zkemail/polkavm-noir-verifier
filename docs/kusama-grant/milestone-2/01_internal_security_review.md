@@ -1,6 +1,6 @@
 # 01 - Internal Security Review
 
-Milestone 2 deliverable: structured review of stack/heap sizing safety across circuit shapes, panic/overflow handling, and revert-data parity, for the PolkaVM-native UltraHonk verifier runtime.
+Milestone 2 deliverable: structured review of stack/heap sizing safety across circuit shapes, panic/overflow handling, and revert-data parity.
 
 ## What it is
 

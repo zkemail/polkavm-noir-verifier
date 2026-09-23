@@ -122,14 +122,33 @@ fn parse_verify_args(data: &[u8]) -> Option<ParseResult> {
 /// 8 G1·128 + 28·8·Fr·32 + 40·Fr·32 + 27 G1·128 + 28·Fr·32 + 2 G1·128 = 14080.
 const PROOF_SIZE: usize = 14080;
 
+/// Exact ABI-encoded length of a well-formed `verify(bytes,bytes32[])` call's
+/// calldata, excluding the 4-byte selector: 2 offsets (64) + bytes length
+/// prefix (32) + PROOF_SIZE (already a multiple of 32, no padding needed)
+/// + array length prefix (32) + {{NUM_PUB}} array elements (32 bytes each).
+const EXPECTED_CALLDATA_LEN: usize = 64 + 32 + PROOF_SIZE + 32 + {{NUM_PUB}} * 32;
+
+/// Upper bound on accepted calldata length, used to reject oversized calldata
+/// before the copy-into-heap allocation below so an attacker can't force an
+/// unbounded allocation (and the resulting alloc-failure trap) just by
+/// padding calldata with garbage. 2x EXPECTED_CALLDATA_LEN comfortably
+/// tolerates legitimate malformed-but-honest calls too, e.g. a public-inputs
+/// array a handful of elements longer than expected (correctly rejected
+/// downstream by parse_verify_args as PublicInputsLengthWrong), while
+/// staying well under this circuit's heap capacity in every tested shape
+/// (roughly 40-60% of total heap across the 7 test fixtures), leaving room
+/// for every later allocation.
+const MAX_ACCEPTED_CALLDATA_LEN: usize = 2 * EXPECTED_CALLDATA_LEN;
+
 /// Verifier return-data protocol (matches REVM-built HonkVerifier.sol's
 /// revert behaviour on failure; success is a single 0x01 byte rather than
 /// the strict-Solidity 32-byte `bool true` ABI because pallet-revive's
 /// EVM-RPC adapter currently flags multi-byte returns as `status=0`
 /// (reverted) in transaction receipts even when the contract executed
-/// successfully — see notes in FINDINGS. Clients should decode the return
-/// as `bytes1` (`0x01` = success) and rely on the custom-error selector
-/// in revert data for failure cases.
+/// successfully, confirmed genuine via a read-only eth_call returning
+/// 0x01 before the real mined transaction. Clients should decode the
+/// return as `bytes1` (`0x01` = success) and rely on the custom-error
+/// selector in revert data for failure cases.
 const RETURN_TRUE_BYTE: [u8; 1] = [1];
 
 /// keccak256("ProofLengthWrong()")[:4] — matches HonkVerifier.sol
@@ -152,6 +171,9 @@ const RC_SHPLEMINI_FAILED: u8 = 50;
 
 fn handle_verify(length: usize) {
     let data_len = length.saturating_sub(4);
+    if data_len > MAX_ACCEPTED_CALLDATA_LEN {
+        api::return_value(ReturnFlags::REVERT, b"INPUT_TOO_LARGE");
+    }
     let mut data = alloc::vec![0u8; data_len];
     if data_len > 0 {
         api::call_data_copy(&mut data, 4);
@@ -240,5 +262,5 @@ fn compute_public_input_delta(
         denominator_acc = denominator_acc - beta;
     }
 
-    numerator * denominator.inverse().unwrap()
+    numerator * denominator.inverse().unwrap_or(Fr::zero())
 }

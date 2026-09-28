@@ -17,6 +17,6 @@ panic = "abort"
 overflow-checks = false
 
 [dependencies]
-polkavm-derive = "0.30"
+polkavm-derive = "0.35"
 simplealloc = { version = "0.0.1", git = "https://github.com/paritytech/polkavm.git", rev = "bd2d14ed105467fd158b4744fd92f7045d288bb8" }
 pallet-revive-uapi = { version = "0.10", default-features = false }

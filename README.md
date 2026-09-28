@@ -21,7 +21,7 @@ The generator reads a `HonkVerifier.sol` (produced by Barretenberg's `bb write_s
 ## Requirements
 
 - [Rust](https://rustup.rs/) nightly, pinned to `nightly-2026-04-20` via `generator/honk-verifier/static/rust-toolchain.toml`
-- [polkatool](https://github.com/paritytech/polkavm) **0.25.0** for PolkaVM linking. Install via `cargo install polkatool --version 0.25.0 --locked`. Newer versions emit bytecode Paseo's pallet-revive rejects, so the version is pinned to match the chain's pallet-revive runtime.
+- [polkatool](https://github.com/paritytech/polkavm) **0.29.0** for PolkaVM linking. Install via `cargo install polkatool --version 0.29.0 --locked`. Newer versions (0.30.0+) default to emitting the `Latest64` instruction-set kind for this build target instead of `ReviveV1`; `pallet-revive` only accepts `ReviveV1`-tagged blobs (hardcoded in [`limits.rs`](https://github.com/paritytech/polkadot-sdk/blob/master/substrate/frame/revive/src/limits.rs)), independent of which `polkavm` crate version the chain's runtime itself is on, so anything linked with 0.30.0+ is rejected with `CodeRejected`. Confirmed against Paseo's live runtime, and 0.29.0 is the newest version whose default still targets `ReviveV1`.
 - Node.js 18+ (for generator and deploy scripts)
 - [Foundry](https://getfoundry.sh/) (`cast`) for running tests
 - PAS tokens on Paseo testnet ([faucet](https://faucet.polkadot.io/?parachain=1000))

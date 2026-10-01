@@ -10,13 +10,16 @@ Two deliberate differences from that circuit:
   zkemail/zkemail.nr#62, which binds the RSA `redc` parameter into the key
   hash, so `pubkey.hash()` now returns `[modulus_hash, redc_hash]`. That adds
   one public input (155 -> 156).
-- The circuit asserts that the regex inputs come from DKIM-signed bytes:
-  `body`/`decoded_body` storage past `len()` is zero, `decoded_body.len() <=
-  body.len()`, and each regex match ends within the signed length.
-  `check_signed_bounds.py` (run in CI) checks that inputs violating this are
-  rejected.
+- Each regex match must end within the DKIM-signed bytes: the header regex
+  within `header.len()`, the body regex within the decoded image of the signed
+  body (`body.len()` minus 3 bytes per soft line break that starts inside it).
+  Storage past `len()` is unsigned. It is not required to be zero, because
+  input generators fill it differently (relayer-utils zero-pads,
+  zkemail.nr's JS generator leaves SHA-256 padding). `check_signed_bounds.py`
+  (run in CI) checks that both layouts prove and that matches outside the
+  signed bytes are rejected.
 
-- Gate count: 496,232 (run `bb gates -b target/zkemail/twitter@v1.json` to verify)
+- Gate count: 486,617 (run `bb gates -b target/zkemail/twitter@v1.json` to verify)
 - Public inputs: 156
 - `LOG_N`: 19
 

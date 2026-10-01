@@ -60,16 +60,10 @@ fn main(
         "Decoded body does not properly remove soft line breaks",
     );
     // NOTE: the DKIM signature covers header[0..header.len()) and the body hash covers
-    // body[0..body.len()). Everything a regex below reads must come from those signed bytes.
-    // See `assert_zero_padded` for why each check is needed.
-    assert_zero_padded(body);
-    assert_zero_padded(decoded_body);
+    // body[0..body.len()). Every regex below must read only those signed bytes (see
+    // `signed_decoded_len` for why storage past len() cannot be trusted).
     assert(
-        decoded_body.len() <= body.len(),
-        "Decoded body cannot be longer than the encoded body",
-    );
-    assert(
-        x_handle_match_start + x_handle_match_length <= decoded_body.len(),
+        x_handle_match_start + x_handle_match_length <= signed_decoded_len(body),
         "Body regex match must lie within the signed body",
     );
     assert(
@@ -106,18 +100,31 @@ fn main(
 }
 
 /**
- * Asserts that every byte of `vec`'s storage at index >= len() is zero.
+ * Number of leading bytes of the soft-line-break-decoded body that come from signed body bytes.
  *
- * REASON: BoundedVec storage past len() is a free prover input. sha256_var / partial_sha256_var_end
- * only hash bytes [0, len()), and zk-regex's select_subarray only bounds a match by the array
- * capacity, not by len(). remove_soft_line_breaks also runs over the whole storage, so unsigned
- * bytes past body.len() flow into decoded_body. Without this check (and the match bounds in
- * main) a regex can match bytes that were never signed, and the public outputs no longer
- * describe the signed email. Do not remove these checks to save gates (they cost ~2 gates/byte).
+ * REASON: BoundedVec storage past len() is a free prover input. sha256_var and
+ * partial_sha256_var_end only hash bytes [0, len()), zk-regex's select_subarray only bounds a
+ * match by the array capacity, and remove_soft_line_breaks decodes the whole storage, so bytes past
+ * body.len() also reach decoded_body. A regex match must therefore end before the decoded image of
+ * body.len(), otherwise the public outputs need not come from the signed email.
+ *
+ * NOTE: we bound matches instead of asserting the storage tail is zero, because legitimate input
+ * generators fill it differently: relayer-utils zero-pads, but zkemail.nr's JS generator leaves
+ * SHA-256 padding there and sets decoded_body.len() past the signed content. decoded_body.len() is
+ * therefore not trusted either. Each "=\r\n" that starts inside the signed body removes 3 bytes. A
+ * break that straddles body.len() is also counted, which only makes the bound stricter.
  */
-fn assert_zero_padded<let N: u32>(vec: BoundedVec<u8, N>) {
-    let storage = vec.storage();
-    for i in 0..N {
-        assert((i < vec.len()) | (storage[i] == 0), "BoundedVec storage past len() must be zero");
+fn signed_decoded_len<let N: u32>(body: BoundedVec<u8, N>) -> u32 {
+    let storage = body.storage();
+    let len = body.len();
+    let mut removed: u32 = 0;
+    for i in 0..N - 2 {
+        let is_break = (storage[i] == 0x3D) & (storage[i + 1] == 0x0D) & (storage[i + 2] == 0x0A);
+        removed += ((is_break & (i < len)) as u32) * 3;
+    }
+    if removed > len {
+        0
+    } else {
+        len - removed
     }
 }

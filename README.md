@@ -124,7 +124,7 @@ cd ../..
 | `fixtures/huge-pub-input` | 350 | 1,001 | 11 |
 | `fixtures/large-circuit` | 815 | 1 | 10 |
 | `fixtures/huge-circuit` | 1,100,015 | 1 | 21 |
-| `fixtures/zkemail` ([zkemail/ens-contracts](https://github.com/zkemail/ens-contracts), real production circuit, with fixes - see its README) | 496,232 | 156 | 19 |
+| `fixtures/zkemail` ([zkemail/ens-contracts](https://github.com/zkemail/ens-contracts), real production circuit, with fixes - see its README) | 486,617 | 156 | 19 |
 
 ## Continuous integration
 

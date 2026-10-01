@@ -36,7 +36,7 @@ fn main(
     sender_domain_capture_group_1_id: [Field; 64],
     sender_domain_capture_group_1_start: [Field; 64],
     sender_domain_capture_group_start_indices: [Field; 1],
-) -> pub (Field, Field, Field, Field, [Field; 1] , [Field; 20], BoundedVec<u8, 64>, BoundedVec<u8, 64>) {
+) -> pub ([Field; 2], Field, Field, Field, [Field; 1] , [Field; 20], BoundedVec<u8, 64>, BoundedVec<u8, 64>) {
     // check the body and header lengths are within bounds
     assert(header.len() <= 960);
     assert(body.len() <= 1920);
@@ -59,6 +59,21 @@ fn main(
         remove_soft_line_breaks(body.storage(), decoded_body.storage()),
         "Decoded body does not properly remove soft line breaks",
     );
+    // NOTE: the DKIM signature covers header[0..header.len()) and the body hash covers
+    // body[0..body.len()). Every regex below must read only those signed bytes (see
+    // `signed_decoded_len` for why storage past len() cannot be trusted).
+    assert(
+        x_handle_match_start + x_handle_match_length <= signed_decoded_len(body),
+        "Body regex match must lie within the signed body",
+    );
+    assert(
+        sender_domain_match_start + sender_domain_match_length <= header.len(),
+        "Header regex match must lie within the signed header",
+    );
+
+    // NOTE: zkemail.nr >= 2.0.0 (zkemail/zkemail.nr#62) returns [modulus_hash, redc_hash]. Earlier
+    // versions hashed only the 2048-bit modulus, so redc was not bound to the public key hash. A
+    // verifier consumer must check both values against the DKIM key it trusts.
     let pubkey_hash = pubkey.hash();
     let email_nullifier = poseidon::bn254::hash_1([poseidon_large(signature)]);
     let x_handle_capture_1 = x_handle_regex::regex_match::<1920, 64>(
@@ -82,4 +97,34 @@ fn main(
         sender_domain_capture_group_start_indices,
     );
     (pubkey_hash, email_nullifier, header_hash[0], header_hash[1], prover_address, command, x_handle_capture_1, sender_domain_capture_1)
+}
+
+/**
+ * Number of leading bytes of the soft-line-break-decoded body that come from signed body bytes.
+ *
+ * REASON: BoundedVec storage past len() is a free prover input. sha256_var and
+ * partial_sha256_var_end only hash bytes [0, len()), zk-regex's select_subarray only bounds a
+ * match by the array capacity, and remove_soft_line_breaks decodes the whole storage, so bytes past
+ * body.len() also reach decoded_body. A regex match must therefore end before the decoded image of
+ * body.len(), otherwise the public outputs need not come from the signed email.
+ *
+ * NOTE: we bound matches instead of asserting the storage tail is zero, because legitimate input
+ * generators fill it differently: relayer-utils zero-pads, but zkemail.nr's JS generator leaves
+ * SHA-256 padding there and sets decoded_body.len() past the signed content. decoded_body.len() is
+ * therefore not trusted either. Each "=\r\n" that starts inside the signed body removes 3 bytes. A
+ * break that straddles body.len() is also counted, which only makes the bound stricter.
+ */
+fn signed_decoded_len<let N: u32>(body: BoundedVec<u8, N>) -> u32 {
+    let storage = body.storage();
+    let len = body.len();
+    let mut removed: u32 = 0;
+    for i in 0..N - 2 {
+        let is_break = (storage[i] == 0x3D) & (storage[i + 1] == 0x0D) & (storage[i + 2] == 0x0A);
+        removed += ((is_break & (i < len)) as u32) * 3;
+    }
+    if removed > len {
+        0
+    } else {
+        len - removed
+    }
 }

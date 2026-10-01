@@ -110,6 +110,9 @@ jobs:
             )
           done
 
+      - name: Check zkemail fixture rejects regex matches outside signed bytes
+        run: python3 fixtures/zkemail/check_signed_bounds.py zkemail
+
       - name: Run equivalence tests across the circuit-shape matrix
         run: |
           set -e

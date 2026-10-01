@@ -4,8 +4,20 @@ Real-world Noir circuit from `zkemail/ens-contracts:test/fixtures/linkHandleComm
 Verifies a zkEmail proof that links a Twitter/X handle to an email
 address, with regex-based extraction of sender domain and handle.
 
-- Gate count: 468,002 (run `bb gates -b target/zkemail/twitter@v1.json` to verify)
-- Public inputs: 155
+Two deliberate differences from that circuit:
+
+- zkemail.nr is pinned to `v2.0.0` (was `v.1.0.1-beta.5`). v2.0.0 includes
+  zkemail/zkemail.nr#62, which binds the RSA `redc` parameter into the key
+  hash, so `pubkey.hash()` now returns `[modulus_hash, redc_hash]`. That adds
+  one public input (155 -> 156).
+- The circuit asserts that the regex inputs come from DKIM-signed bytes:
+  `body`/`decoded_body` storage past `len()` is zero, `decoded_body.len() <=
+  body.len()`, and each regex match ends within the signed length.
+  `check_signed_bounds.py` (run in CI) checks that inputs violating this are
+  rejected.
+
+- Gate count: 496,232 (run `bb gates -b target/zkemail/twitter@v1.json` to verify)
+- Public inputs: 156
 - `LOG_N`: 19
 
 ## Generate proof artifacts
